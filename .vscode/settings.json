@@ -1,0 +1,86 @@
+{
+    "python.autoComplete.extraPaths": [
+    ],
+    "python.analysis.extraPaths": [
+    ],
+    "python.analysis.exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/build",
+        ".git",
+        "myenv/**",
+        "infra/**",
+        "bin/**",
+        "dist/**",
+        "cdk.out/**"
+    ],
+    "terminal.integrated.profiles.osx": {
+        "bash": {
+            "path": "/bin/bash",
+            "args": [
+                "--rcfile",
+                "${workspaceFolder}/setup_python_path.sh"
+            ]
+        },
+        "zsh": {
+            "path": "/bin/zsh",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/setup_python_path.sh; exec zsh"
+            ]
+        }
+    },
+    "terminal.integrated.profiles.linux": {
+        "bash": {
+            "path": "/bin/bash",
+            "args": [
+                "--rcfile",
+                "${workspaceFolder}/setup_python_path.sh"
+            ]
+        },
+        "zsh": {
+            "path": "/bin/zsh",
+            "args": [
+                "-c",
+                "source ${workspaceFolder}/setup_python_path.sh; exec zsh"
+            ]
+        }
+    },
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "args": [
+                "-NoExit",
+                "-File",
+                "${workspaceFolder}\\setup_python_path.ps1"
+            ]
+        }
+    },
+    "terminal.integrated.defaultProfile.osx": "zsh",
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
+    "pylint.args": [
+        "--rcfile=${workspaceFolder}/.pylintrc"
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        }
+    },
+
+    "black-formatter.args": [
+        "--line-length=120"
+    ],
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/.git": true,
+        "**/__pycache__": true
+    }
+}
