@@ -1,4 +1,5 @@
 # game_engine.py
+
 from game_state import GameState
 from utils.simulation import simulate_month
 
@@ -9,10 +10,9 @@ class GameEngine:
         self.state = GameState(cfg)
 
     def play_turn(self):
-        print(f"\n--- MONTH {self.state.month} ---")
         month_summary = simulate_month(self.state)
-
-        print("\n--- Simulation Results ---")
+        print(f"\n--- MONTH {self.state.month} Simulation Results ---")
+        # jprint(month_summary)
         for k, v in month_summary.items():
             print(f"{k:15}: {v}")
 
@@ -76,27 +76,30 @@ class GameEngine:
         self.state.net_cash += amount
 
     def prompt_action(self):
-        print("\nWhat would you like to do?")
-        print("1) Take additional draw")
-        print("2) Reinvest net cash")
-        print("3) Trigger BTC-backed loan")
-        print("4) Deploy cash (loan payoff or MSTY buy)")
-        print("5) End game")
+        while True:
+            print("\nChoose an action:")
+            print("1) Reinvest net cash into MSTY")
+            print("2) Take BTC-backed loan")
+            print("3) Use cash reserves to buy MSTY")
+            print("4) Pay down loan principal")
+            print("5) Take additional draw")
+            print("6) Finish month")
 
-        choice = input("Enter choice: ").strip()
-        self.process_action(choice)
+            choice = input("Enter choice: ").strip()
+            if choice == "6" or choice == "":
+                if self.state.net_cash > 0:
+                    self.state.cash_reserves += self.state.net_cash
+                    print(
+                        f"💰 Moved ${self.state.net_cash:,.2f} net cash into cash reserves."
+                    )
+                    self.state.net_cash = 0
+                print("✅ Ending month.\n")
+                break
+
+            self.process_action(choice)
 
     def process_action(self, choice):
         if choice == "1":
-            try:
-                amount = float(input("Enter additional draw amount: $"))
-            except ValueError:
-                print("⚠️ Invalid number. Skipping draw.")
-                return
-            self.state.extra_draw = amount
-            print(f"✅ Additional draw of ${amount:,.2f} scheduled for next turn.")
-
-        elif choice == "2":
             if self.state.net_cash > 0:
                 shares_bought = self.state.net_cash / self.state.msty_price
                 self.state.msty_shares += shares_bought
@@ -105,55 +108,60 @@ class GameEngine:
                 )
                 self.state.net_cash = 0
             else:
-                print("ℹ️ No cash to reinvest.")
+                print("ℹ️ No net cash available to reinvest.")
 
-        elif choice == "3":
+        elif choice == "2":
             try:
                 amount = float(input("Enter BTC-backed loan amount to take: $"))
             except ValueError:
-                print("⚠️ Invalid number. Skipping loan.")
+                print("⚠️ Invalid number.")
                 return
-            self.take_loan(amount)
-            print(f"✅ Requested BTC-backed loan of ${amount:,.2f}.")
+            self.state.loan_balance += amount
+            self.state.cash_reserves += amount
+            print(f"✅ Loan of ${amount:,.2f} added to cash reserves.")
 
-        elif choice == "4":
+        elif choice == "3":
             if self.state.cash_reserves <= 0:
                 print("⚠️ No cash reserves available.")
                 return
-            print("\nDeploy cash reserves:")
-            print("1) Buy MSTY shares")
-            print("2) Pay down loan")
-            sub_choice = input("Enter choice: ").strip()
+            try:
+                amount = float(input("Enter cash reserve amount to invest: $"))
+            except ValueError:
+                print("⚠️ Invalid number.")
+                return
+            amount = min(amount, self.state.cash_reserves)
+            shares_bought = amount / self.state.msty_price
+            self.state.msty_shares += shares_bought
+            self.state.cash_reserves -= amount
+            print(
+                f"✅ Bought {shares_bought:,.2f} MSTY shares with ${amount:,.2f} cash."
+            )
 
-            if sub_choice == "1":
-                amt = float(input("Enter amount to invest in MSTY: $"))
-                if amt > self.state.cash_reserves:
-                    print("❌ Not enough cash reserves.")
-                    return
-                self.state.cash_reserves -= amt
-                self.state.msty_shares += amt / self.state.msty_price
-                print(f"✅ Bought ${amt:,.2f} worth of MSTY shares.")
-
-            elif sub_choice == "2":
-                amt = float(input("Enter amount to pay toward loan: $"))
-                if amt > self.state.cash_reserves:
-                    print("❌ Not enough cash reserves.")
-                    return
-                self.state.cash_reserves -= amt
-                self.state.loan_balance = max(0, self.state.loan_balance - amt)
-                print(f"✅ Paid down ${amt:,.2f} of loan balance.")
+        elif choice == "4":
+            if self.state.loan_balance <= 0:
+                print("ℹ️ No loan to pay down.")
+                return
+            try:
+                amount = float(input("Enter amount to pay down on the loan: $"))
+            except ValueError:
+                print("⚠️ Invalid number.")
+                return
+            amount = min(amount, self.state.cash_reserves, self.state.loan_balance)
+            self.state.loan_balance -= amount
+            self.state.cash_reserves -= amount
+            print(f"✅ Paid ${amount:,.2f} towards loan principal.")
 
         elif choice == "5":
-            print("👋 Game over. Exiting.")
-            exit()
+            try:
+                amount = float(input("Enter additional draw amount: $"))
+            except ValueError:
+                print("⚠️ Invalid number.")
+                return
+            self.state.extra_draw = amount
+            print(f"✅ Scheduled extra draw of ${amount:,.2f} for next month.")
 
         else:
-            if self.state.net_cash > 0:
-                self.state.cash_reserves += self.state.net_cash
-                print(f"💰 Added ${self.state.net_cash:,.2f} to cash reserves.")
-                self.state.net_cash = 0
-            else:
-                print("⏭️ No action taken this month.")
+            print("❌ Invalid action.")
 
     def run(self):
         while not self.state.fail:

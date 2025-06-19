@@ -29,8 +29,17 @@ def simulate_month(state):
 
     decay = random.gauss(mean_decay, std_dev_decay)
     decay = max(cfg.decay_low, min(decay, cfg.decay_high))
-    dy = random.gauss(cfg.mean_yield, cfg.std_dev_yield)
+    # dy = random.gauss(cfg.mean_yield, cfg.std_dev_yield)
+
+    # Steep nonlinear scale + noise
+    nav_up = max(0, -decay)
+
+    # Logistic-style curve or steep polynomial
+    base_dy = 0.08 + 0.60 * nav_up**1.5  # rapid rise for big gains
+    dy = random.gauss(base_dy, 0.01)
     dy = max(cfg.dist_yield_low, min(dy, cfg.dist_yield_high))
+
+    # dy = max(cfg.dist_yield_low, min(dy, cfg.dist_yield_high))
 
     state.msty_price *= 1 - decay
     distribution_amount = state.msty_price * dy
@@ -58,20 +67,23 @@ def simulate_month(state):
 
     return {
         "Month": month,
-        "Regime": 1 if state.regime == "bull" else 0,
+        "Dist": round(distribution_amount, 2),
+        "Dist Yield": round(dy * 100, 2),
+        "Decay Rate": round(decay * 100, 2),
+        "MSTY Price": round(state.msty_price, 2),
+        "MSTY Shares": round(state.msty_shares, 2),
+        "MSTY Value": round(state.msty_shares * state.msty_price, 2),
+        "--------": "---------",
+        # "Regime": 1 if state.regime == "bull" else 0,
         "Revenue": round(revenue, 2),
         "Draw": draw,
         "Total Tax": round(total_tax, 2),
         "Net Cash": state.net_cash,
         "Cash Res": round(state.cash_reserves, 2),
+        "---------": "---------",
         "Paid to Loan": round(interest_paid, 2),
         "Loan Bal": round(state.loan_balance, 2),
-        "MSTY Price": round(state.msty_price, 2),
-        "Dist": round(distribution_amount, 2),
-        "Dist Yield": round(dy * 100, 2),
-        "Decay Rate": round(decay * 100, 2),
-        "MSTY Shares": round(state.msty_shares, 2),
-        "New Shares": 0,
+        "----------": "---------",
         "BTC Val": round(btc_price * cfg.btc_total, 2),
         "Loan Left": round(state.loan_balance, 2),
         "LTV": round(ltv, 2),

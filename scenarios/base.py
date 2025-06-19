@@ -3,46 +3,47 @@ from math import inf
 # === Simulation Parameters ===
 months = 120  # Number of months to simulate (e.g., 10 years)
 epochs = 2000  # Number of Monte Carlo simulation runs
-show_averaged_output = (
-    False  # If True, show average results across all runs; if False, show last run only
-)
-show_failed_runs = (
-    False  # If True, print failed runs with Decay Rate == 0.2000 for debugging
-)
 
-starting_capital_contributed = 300_000  # Initial capital contributed to the strategy
+# If True, show average results across all runs; if False, show last run only
+show_averaged_output = False
+
+# If True, print failed runs with Decay Rate == 0.2000 for debugging
+show_failed_runs = False
+
+starting_capital_contributed = 450_000  # Initial capital contributed to the strategy
 btc_total = 14  # Total BTC held (for LTV calculations)
-starting_cash_reserves = (
-    20_000  # Cash reserves to cover shortfalls in net cash (not invested unless needed)
-)
+
+# Cash reserves to cover shortfalls in net cash (not invested unless needed)
+starting_cash_reserves = 30_000
+
 cash_tranche_count = 4  # Number of tranches to split cash reserves into for opportunistic buying (0 disables feature)
 cash_tranche_period = 6  # Lookback period (months) for volatility-adjusted buying logic
-vol_buy_threshold = (
-    -1.2
-)  # Buy if price is 1.2 std dev below mean of lookback period (if tranches enabled)
+
+# Buy if price is 1.2 std dev below mean of lookback period (if tranches enabled)
+vol_buy_threshold = -1.2
+
 
 btc_price_init = 104_896.3  # Initial BTC price
-btc_growth_rate = (
-    0.20  # Annual linear growth rate for BTC price (used for BTC LTV calculations)
-)
+
+# Annual linear growth rate for BTC price (used for BTC LTV calculations)
+btc_growth_rate = 0.20
 
 loan_apy = 0.13  # Annual percentage yield (interest rate) for loans
 loan_origination_fee_rate = 0.0
 
 # === Regime-based Leverage Parameters ===
-target_ltv = 10.0  # Target LTV (%) for bull markets
-ltv_buffer = (
-    4  # Only stack loans if LTV < (target_ltv - ltv_buffer), stop if >= target_ltv
-)
+target_ltv = 0.0  # Target LTV (%) for bull markets
+
+# Only stack loans if LTV < (target_ltv - ltv_buffer), stop if >= target_ltv
+ltv_buffer = 4
 
 # Tax parameters
 state_tax_rate = 0.05  # State tax rate (federal tax is computed monthly in the code)
 
-dist_yield_low = (
-    0.04  # Minimum monthly distribution yield (as a fraction, e.g., 0.04 = 4%)
-)
+# Minimum monthly distribution yield (as a fraction, e.g., 0.04 = 4%)
+dist_yield_low = 0.05
 dist_yield_high = 0.15  # Maximum monthly distribution yield (as a fraction)
-mean_yield = 0.065  # Mean monthly distribution yield (historical average)
+mean_yield = 0.085  # Mean monthly distribution yield (historical average)
 std_dev_yield = 0.0224  # Standard deviation of monthly yield (historical)
 
 decay_low = -0.20  # Minimum monthly NAV decay (as a fraction, e.g., -0.20 = -20%)
@@ -86,16 +87,19 @@ decay_high = 0.20  # Maximum monthly NAV decay (as a fraction)
 # | 18 months         | 0.0556            |
 
 # --- Example Setup for 75/25 regime split ---
-bull_to_bear_prob = 0.0667  # Bull markets last ~15 months
+bull_to_bear_prob = 0.0833  # Bull markets last ~15 months
 bear_to_bull_prob = 0.20  # Bear markets last ~5 months
 
 # --- NAV Decay by Regime ---
-bull_mean_decay = (
-    0.01  # Bull: slight positive or flat NAV (simulate modest appreciation)
-)
-bull_std_dev_decay = 0.15
+# Bull: slight positive or flat NAV (simulate modest appreciation)
+# bull_std_dev_tight = 0.08
+# bear_std_dev_tight = 0.10
+
+bull_mean_decay = -0.01
+bull_std_dev_decay = 0.08
+#
 bear_mean_decay = 0.04  # Bear: -4% average monthly NAV decay
-bear_std_dev_decay = 0.25
+bear_std_dev_decay = 0.15
 
 
 # === Draw Tiers ===

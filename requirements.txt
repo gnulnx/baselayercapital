@@ -1,3 +1,7 @@
 pandas
 matplotlib
 jprint
+scikit-learn
+yfinance
+lxml
+html5lib
