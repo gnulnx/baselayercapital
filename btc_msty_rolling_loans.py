@@ -19,17 +19,15 @@ show_averaged_output = True
 # If True, print failed runs with Decay Rate == 0.2000 for debugging
 show_failed_runs = False
 
-starting_capital_contributed = 440_000  # Initial capital contributed to the strategy
+starting_capital_contributed = 460_000  # Initial capital contributed to the strategy
 btc_total = 14  # Total BTC held (for LTV calculations)
 # Cash reserves to cover shortfalls in net cash (not invested unless needed)
 starting_cash_reserves = 20_000
-cash_tranche_count = 4  # Number of tranches to split cash reserves into for opportunistic buying (0 disables feature)
-cash_tranche_period = 6  # Lookback period (months) for volatility-adjusted buying logic
 
 # Buy if price is 1.2 std dev below mean of lookback period (if tranches enabled)
 vol_buy_threshold = -1.2
 
-btc_price_init = 104_896.3  # Initial BTC price
+btc_price_init = 100_000  # Initial BTC price
 # Annual linear growth rate for BTC price (used for BTC LTV calculations)
 btc_growth_rate = 0.20
 
@@ -37,17 +35,21 @@ loan_apy = 0.13  # Annual percentage yield (interest rate) for loans
 loan_origination_fee_rate = 0.0
 
 # === Regime-based Leverage Parameters ===
-target_ltv = 0.0  # Target LTV (%) for bull markets
+target_ltv = 10  # Target LTV (%) for bull markets
 # Only stack loans if LTV < (target_ltv - ltv_buffer), stop if >= target_ltv
-ltv_buffer = 5
+# ltv_buffer = 5
 
+btc_loan_cash = target_ltv / 100 * btc_price_init * btc_total
+btc_monthly_dca = 0.075 * btc_loan_cash
+print(f"btc_monthly_dca: ${btc_monthly_dca:,.2f}")
+input()
 # Tax parameters
 state_tax_rate = 0.05  # State tax rate (federal tax is computed monthly in the code)
 
 # Minimum monthly distribution yield (as a fraction, e.g., 0.04 = 4%)
-dist_yield_low = 0.05
+dist_yield_low = 0.025
 dist_yield_high = 0.15  # Maximum monthly distribution yield (as a fraction)
-mean_yield = 0.085  # Mean monthly distribution yield (historical average)
+mean_yield = 0.065  # Mean monthly distribution yield (historical average)
 std_dev_yield = 0.0224  # Standard deviation of monthly yield (historical)
 
 decay_low = -0.20  # Minimum monthly NAV decay (as a fraction, e.g., -0.20 = -20%)
@@ -91,21 +93,30 @@ decay_high = 0.20  # Maximum monthly NAV decay (as a fraction)
 # | 18 months         | 0.0556            |
 
 # --- Example Setup for 75/25 regime split ---
-bull_to_bear_prob = 0.0278  # ~36 months average bull duration
-bear_to_bull_prob = 0.0833  # ~12 months average bear duration
+# bull_to_bear_prob = 0.0278  # ~36 months average bull duration
+# bear_to_bull_prob = 0.0833  # ~12 months average bear duration
+
+
+# More likely to simulate volatility phases..
+# bull_to_bear_prob = 0.3333  # ~3 months avg high-vol regime
+# bear_to_bull_prob = 0.0833  # ~12 months avg low-vol regime
+
+bull_to_bear_prob = 0.20  # ~5 months avg high-vol
+bear_to_bull_prob = 0.125  # ~8 months avg low-vol
+
 
 # --- NAV Decay by Regime ---
 # Bull: slight positive or flat NAV (simulate modest appreciation)
-bull_mean_decay = -0.005  # Bull: -0.5% average monthly NAV decay
+bull_mean_decay = -0.05  # Bull: -0.5% average monthly NAV decay (increase (good))
 bull_std_dev_decay = 0.08
-bear_mean_decay = 0.10  # Bear: -4% average monthly NAV decay
+bear_mean_decay = 0.07  # Bear: -4% average monthly NAV decay
 bear_std_dev_decay = 0.10
 
 
 # === Draw Tiers ===
 # Each tuple is (draw amount, min revenue, max revenue). Used to determine income draw based on revenue.
 draw_tiers = [
-    (10_000, 0, 100_000),
+    (8_000, 0, 100_000),
     (12_500, 100_000, 200_000),
     (15_000, 200_000, 300_000),
     (20_000, 300_000, 500_000),
@@ -144,44 +155,17 @@ for _ in range(epochs):
     fail = False
     results = []
     cash_reserves = starting_cash_reserves
-    tranche_size = (
-        starting_cash_reserves / cash_tranche_count if cash_tranche_count > 0 else 0
-    )
-    tranches_left = cash_tranche_count
+
     price_history = []
-    last_buy_month = -cash_tranche_period
     regime = "bull" if random.random() < 0.7 else "bear"
     loan_active = False  # Track if a loan is currently active
     cumulative_fees_paid = 0
+    net_loss_months = 0
 
     for month in range(1, months + 1):
         btc_price = btc_price_init * (1 + btc_growth_rate) ** (month / 12)
         collateral_value = btc_price * btc_total
         ltv = (loan_balance / collateral_value) * 100 if collateral_value > 0 else 0
-
-        # === Bull regime: always refinance to target LTV (principal only) ===
-        if regime == "bull" and ltv < (target_ltv - ltv_buffer):
-            target_loan = (target_ltv / 100) * collateral_value
-            # print("Target Loan:", target_loan, "Collateral Value:", collateral_value)
-            # input()
-            # Refinance to target LTV every month in bull regime
-            topup = target_loan - loan_balance
-            if abs(topup) > 1e-2:
-                # if abs(topup) > 100:
-                if topup > 0:
-                    origination_fee = topup * loan_origination_fee_rate
-                    net_loan_proceeds = topup - origination_fee
-                    loan_balance += topup  # full loan amount owed
-                    msty_shares += net_loan_proceeds / msty_price
-                    cumulative_fees_paid += origination_fee  # track if desired
-                # elif topup < 0:
-                #     paydown = min(-topup, loan_balance)
-                #     loan_balance -= paydown
-                #     if loan_balance <= 1e-6:
-                #         loan_balance = 0
-                #         loan_active = False
-
-            loan_active = loan_balance > 0
 
         # Regime switching logic
         if regime == "bull":
@@ -200,8 +184,9 @@ for _ in range(epochs):
         # Calculate the modelled NAV decay and distribution yield
         decay = random.gauss(mean_decay, std_dev_decay)
         decay = max(decay_low, min(decay, decay_high))
-        dy = random.gauss(mean_yield, std_dev_yield)
-        dy = max(dist_yield_low, min(dy, dist_yield_high))
+        dy = random.gauss(mean_yield, std_dev_yield)  # distribution yield
+        dy *= 1 - decay * 0.8  # nav decay amplifies yield
+        dy = max(dist_yield_low, min(dy, dist_yield_high))  # cap yield
         msty_price *= 1 - decay
         distribution_amount = msty_price * dy
 
@@ -221,10 +206,13 @@ for _ in range(epochs):
         tax = fed_tax + state_tax
 
         # Step 5: Determine draw (personal income) based on taxable income
-        for amount, min_rev, max_rev in draw_tiers:
-            if min_rev <= taxable_income < max_rev:
-                draw = amount
-                break
+        if month < 4:
+            draw = 0
+        else:
+            for amount, min_rev, max_rev in draw_tiers:
+                if min_rev <= taxable_income < max_rev:
+                    draw = amount
+                    break
 
         # Step 6 Calculate net cash after revenue, tax, draw, and interest
         net_cash = taxable_income - tax - draw
@@ -291,35 +279,51 @@ for _ in range(epochs):
                     print(f"Ratio: {ratio:.2%}")
                     input("Simulation failed. Press Enter to continue...")
                 break
-        # Set aside 10% of net_cash to cash reserves if reserves are under $10,000 and net_cash is positive
-        if cash_reserves < 10_000 and net_cash > 0:
-            reserve_add = 0.10 * net_cash
+
+        # === Reinvestment Strategy ===
+        # - If NAV growth (-decay) > yield → stack cash (avoid buying tops)
+        #     Rationale: During strong NAV appreciation (e.g., MSTR surge),
+        #     MSTY price inflates before yield compresses. DRIPing at this point
+        #     risks buying premium shares before inevitable decay resumes.
+        # - Else → DRIP into MSTY (price has likely stabilized or yield is attractive)
+        # Cash reserves are used only if net_cash goes negative.
+        # Replaces older flawed logic: `dy > abs(decay)`
+        if -decay > dy and cash_reserves < 400_000:
+            # Stack cash with leftover net cash
+            reserve_add = net_cash
             cash_reserves += reserve_add
-            net_cash -= reserve_add
-            base_output["Cash Res"] = round(cash_reserves, 2)
-            base_output["Net Cash"] = round(net_cash, 2)
-        # Volatility-adjusted buying logic (for cash reserves)
-        price_history.append(msty_price)
-        if len(price_history) > cash_tranche_period:
-            price_history.pop(0)
-        if (
-            tranches_left > 0
-            and len(price_history) == cash_tranche_period
-            and (month - last_buy_month) >= 1
-        ):
-            mean_price = sum(price_history) / cash_tranche_period
-            std_price = (
-                sum((p - mean_price) ** 2 for p in price_history) / cash_tranche_period
-            ) ** 0.5
-            threshold_price = mean_price + vol_buy_threshold * std_price
-            if msty_price < threshold_price:
-                buy_amt = min(tranche_size, cash_reserves)
-                if buy_amt > 0:
-                    added_shares = buy_amt / msty_price
-                    msty_shares += added_shares
-                    cash_reserves -= buy_amt
-                    tranches_left -= 1
-                    last_buy_month = month
+            net_cash = 0
+            net_loss_months = 0
+
+            if ltv > target_ltv and cash_reserves > 50_000:
+                paydown_amt = min(0.05 * loan_balance, cash_reserves)
+                loan_balance -= paydown_amt
+                cash_reserves -= paydown_amt
+        else:
+            # === Loan-Based DRIP Deployment Strategy ===
+            # Calculate current max loan amount based on target LTV and BTC value
+            max_loan_allowed = (target_ltv / 100) * btc_price * btc_total
+            available_topup = max_loan_allowed - loan_balance
+
+            # Refill loan pool only if BTC price has increased capacity
+            if available_topup > 5_000:
+                loan_balance += available_topup
+                btc_loan_cash += available_topup
+                btc_monthly_dca = 0.075 * btc_loan_cash  # recalc based on new pool
+
+            # DRIP from the loan pool
+            available_loan = min(btc_loan_cash, btc_monthly_dca)
+            reinvest_total = (
+                net_cash + available_loan if net_cash > 0 else available_loan
+            )
+
+            if reinvest_total > 0:
+                msty_shares += reinvest_total / msty_price
+                net_cash = 0
+                btc_loan_cash -= available_loan  # reduce pool
+
+            net_loss_months += 1
+
         # Compound any remaining net_cash
         msty_shares += net_cash / msty_price if net_cash > 0 else 0
         results.append(base_output)
