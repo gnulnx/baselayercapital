@@ -1,0 +1,9 @@
+// tsconfig.json (root)
+{
+  "extends": "./cdk/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "."
+  },
+  "include": ["cdk"]
+}
+
