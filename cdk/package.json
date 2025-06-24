@@ -8,7 +8,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "deploy": "dotenv -e .env.dev -- cdk deploy --all --require-approval never"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
@@ -16,6 +17,7 @@
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
     "aws-cdk": "2.1019.1",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-import": "^2.32.0",
@@ -28,6 +30,7 @@
   },
   "dependencies": {
     "aws-cdk-lib": "2.201.0",
-    "constructs": "^10.0.0"
+    "constructs": "^10.0.0",
+    "dotenv": "^16.5.0"
   }
 }

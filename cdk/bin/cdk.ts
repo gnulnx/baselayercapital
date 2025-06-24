@@ -1,33 +1,42 @@
 #!/usr/bin/env node
+import * as dotenv from 'dotenv'
+dotenv.config({ path: '.env.dev', override: true }) // Hard default to .env.dev for local development for NOW
+
 import * as cdk from 'aws-cdk-lib'
 import { TablesStack } from '../lib/tables'
 
-const ENV_NAME = (process.env.ENV_NAME as string) || 'dev'
-const ENV_TYPE = (process.env.ENV_TYPE as string) || 'dev'
-const ACCOUNT = (process.env.AWS_ACCOUNT_ID as string) || '123456789012'
-const REGION = (process.env.AWS_REGION as string) || 'us-east-1'
-const AWS_PROFILE = (process.env.AWS_PROFILE as string) || 'blx-dev'
+// === Read environment ===
+const ENV_NAME = process.env.ENV_NAME || 'dev'
+const ENV_TYPE = process.env.ENV_TYPE || 'dev'
+const ACCOUNT = process.env.AWS_ACCOUNT_ID!
+const REGION = process.env.AWS_REGION!
+const PROFILE = process.env.AWS_PROFILE!
 
-// switch to the correct AWS profile
-process.env.AWS_PROFILE = AWS_PROFILE
+if (!ACCOUNT || !REGION || !PROFILE) {
+  throw new Error('Missing one of: AWS_ACCOUNT_ID, AWS_REGION, AWS_PROFILE')
+}
 
+// === CDK App config ===
 let dynamoRemovalPolicy = cdk.RemovalPolicy.DESTROY
 let deleteProtection = false
+
 if (ENV_TYPE === 'prd') {
   dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
   deleteProtection = true
 }
 
-dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN // Temporary force while we try to relocate tables to new stack
+// Always use RETAIN for now
+dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
 
 const stackProps = {
   env: { account: ACCOUNT, region: REGION },
-  ENV_NAME: ENV_NAME,
-  ENV_TYPE: ENV_TYPE,
-  dynamoRemovalPolicy: dynamoRemovalPolicy,
-  deleteProtection: deleteProtection,
-  pointInTimeRecovery: ENV_TYPE === 'prd' ? true : false,
+  ENV_NAME,
+  ENV_TYPE,
+  dynamoRemovalPolicy,
+  deleteProtection,
+  pointInTimeRecovery: ENV_TYPE === 'prd',
 }
 
+// === CDK App ===
 const app = new cdk.App()
-new TablesStack(app, `${ENV_NAME}-BlcTablesStack`, stackProps)
+new TablesStack(app, `${ENV_NAME}-BtcTablesStack`, stackProps)
