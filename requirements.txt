@@ -5,3 +5,9 @@ scikit-learn
 yfinance
 lxml
 html5lib
+boto3==1.34.131
+botocore==1.34.131
+gspread==6.2.1
+google-auth
+pydantic==2.11.7
+python-dotenv==1.1.1
