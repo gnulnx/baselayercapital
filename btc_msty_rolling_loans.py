@@ -1,8 +1,10 @@
 # pylint: disable=invalid-name, missing-module-docstring, missing-function-docstring, too-many-locals, too-many-statements, too-many-branches, C0103, C0200, C0112
 
+import hashlib
 import locale
 import random
 from math import inf
+from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,6 +13,7 @@ from matplotlib.widgets import Cursor
 from utils.taxes import monthly_federal_tax
 
 locale.setlocale(locale.LC_ALL, "")
+from jprint import jprint
 
 # === Simulation Parameters ===
 months = 120  # Number of months to simulate (e.g., 10 years)
@@ -104,6 +107,44 @@ draw_tiers = [
     (20_000, 500_000, 750_000),
     (25_000, 750_000, inf),
 ]
+
+params = {
+    "months": months,
+    "epochs": epochs,  # Number of Monte Carlo simulation runs
+    "show_averaged_output": show_averaged_output,
+    "show_failed_runs": show_failed_runs,
+    "starting_capital_contributed": starting_capital_contributed,
+    "btc_total": btc_total,
+    "available_to_loan_btc": available_to_loan_btc,
+    "starting_cash_reserves": starting_cash_reserves,
+    "btc_price_init": btc_price_init,
+    "loan_apy": loan_apy,
+    "loan_origination_fee_rate": loan_origination_fee_rate,
+    "target_ltv": target_ltv,
+    "btc_loan_cash": btc_loan_cash,
+    "dca_amount_fraction": dca_amount_fraction,
+    "btc_monthly_dca": btc_monthly_dca,
+    "state_tax_rate": state_tax_rate,
+    "dist_yield_low": dist_yield_low,
+    "dist_yield_high": dist_yield_high,
+    "mean_yield": mean_yield,
+    "std_dev_yield": std_dev_yield,
+    "decay_low": decay_low,
+    "decay_high": decay_high,
+    "bull_to_bear_prob": f"{bull_to_bear_prob:.2f}",
+    "bear_to_bull_prob": f"{bear_to_bull_prob:.2f}",
+    "btc_bull_to_bear_prob": f"{btc_bull_to_bear_prob:.2f}",
+    "btc_bear_to_bull_prob": f"{btc_bear_to_bull_prob:.2f}",
+    "btc_bull_mean_growth": f"{btc_bull_mean_growth:.2f}",
+    "btc_bull_std_dev_growth": btc_bull_std_dev_growth,
+    "btc_bear_mean_growth": btc_bear_mean_growth,
+    "btc_bear_std_dev_growth": btc_bear_std_dev_growth,
+    "bull_mean_decay": bull_mean_decay,
+    "bull_std_dev_decay": bull_std_dev_decay,
+    "bear_mean_decay": bear_mean_decay,
+    "bear_std_dev_decay": bear_std_dev_decay,
+    "draw_tiers": draw_tiers,
+}
 
 
 # === Rolling Loan Model (No Business Units) ===
@@ -395,7 +436,6 @@ ending_loan = (
 ending_cash = ending_row["Cash Res"] + ending_row["Net Cash"]
 ending_msty_price = ending_row["MSTY Price"]
 ending_net_worth = ending_msty_shares * ending_msty_price + ending_cash - ending_loan
-print("\n--- Simulations TOTAL Results ---")
 print("\n--- Economic Summary (Final Month) ---")
 # locale.currency( 188518982.18, grouping=True
 print(f"Ending BTC value: {locale.currency(ending_row['BTC Val'], grouping=True)}")
@@ -406,6 +446,12 @@ print(f"Ending Cash Reserves: ${ending_row['Cash Res']:,.2f}")
 print(f"Ending Net Cash: ${ending_row['Net Cash']:,.2f}")
 print(f"Ending Cash (Reserves + Net): ${ending_cash:,.2f}")
 print(f"Ending Net Worth: ${ending_net_worth:,.2f}")
+
+jprint(params)
+# create a hash of the parameters for reproducibility
+params_hash = uuid4(hashlib.sha256(str(params).encode()).hexdigest()).hex()
+print(f"\nParameters Hash: {params_hash}\n")
+input()
 
 
 def human_readable_log_labels(x, pos):
