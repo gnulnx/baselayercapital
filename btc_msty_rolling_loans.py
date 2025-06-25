@@ -6,6 +6,8 @@ import random
 from math import inf
 from uuid import uuid4
 import logging
+import math
+
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -22,7 +24,7 @@ DEBUG = False
 months = 120  # Number of months to simulate (e.g., 10 years)
 epochs = 10000  # Number of Monte Carlo simulation runs
 # If True, show average results across all runs; if False, show last run only
-show_averaged_output = True
+show_averaged_output = False
 # If True, print failed runs with Decay Rate == 0.2000 for debugging
 show_failed_runs = False
 
@@ -40,7 +42,7 @@ loan_apy = 0.13  # Annual percentage yield (interest rate) for loans
 loan_origination_fee_rate = 0.0
 
 # === Regime-based Leverage Parameters ===
-target_ltv = 10  # Target LTV (%) for bull markets
+target_ltv = 0  # Target LTV (%) for bull markets
 
 btc_loan_cash = target_ltv / 100 * btc_price_init * btc_total
 dca_amount_fraction = 0.075  # Fraction of BTC loan cash to DCA monthly
@@ -60,8 +62,8 @@ decay_low = -0.20  # Minimum monthly NAV decay (as a fraction, e.g., -0.20 = -20
 decay_high = 0.20  # Maximum monthly NAV decay (as a fraction)
 
 risk_look_back_months = 4
-upper_risk_threshold = 0.30
-lower_risk_threshold = 0.3
+upper_risk_threshold = 0.70
+risk_threshold_buy = 0.2
 
 # # === Regime Switching Parameters ===
 # # These control how often the simulation switches between bull and bear market regimes,
@@ -94,11 +96,14 @@ avg_bear_duration_months = 5  # Low-volatility ("bear") phases typically longer
 
 bull_to_bear_prob = duration_to_prob(avg_bull_duration_months)
 bear_to_bull_prob = duration_to_prob(avg_bear_duration_months)
+print(
+    f"bull_to_bear_prob: {bull_to_bear_prob:.4f}, bear_to_bull_prob: {bear_to_bull_prob:.4f}"
+)
 
 # --- NAV Decay by Regime ---
 # Bull: slight positive or flat NAV (simulate modest appreciation)
-bull_mean_decay = -0.07  # Bull: -0.5% average monthly NAV decay (increase (good))
-bull_std_dev_decay = 0.10
+bull_mean_decay = -0.08  # Bull: -0.5% average monthly NAV decay (increase (good))
+bull_std_dev_decay = 0.05
 bear_mean_decay = 0.07  # Bear: -7% average monthly NAV decay
 bear_std_dev_decay = 0.10
 
@@ -170,6 +175,12 @@ for _ in range(epochs):
 
     price_history = []
     regime = "bull" if random.random() < 0.7 else "bear"
+    regime_months_remaining = (
+        max(2, math.ceil(random.expovariate(1 / avg_bull_duration_months)))
+        if regime == "bull"
+        else max(2, math.ceil(random.expovariate(1 / avg_bear_duration_months)))
+    )
+
     btc_regime = (
         "bull" if random.random() < 0.7 else "bear"
     )  # Independent of MSTY regime
@@ -185,12 +196,24 @@ for _ in range(epochs):
 
     for month in range(1, months + 1):
         # --- MSTY Regime Switching ---
-        if regime == "bull":
-            if random.random() < bull_to_bear_prob:
-                regime = "bear"
-        elif regime == "bear":
-            if random.random() < bear_to_bull_prob:
-                regime = "bull"
+        regime_months_remaining -= 1
+        if regime_months_remaining <= 0:
+            # Flip regime
+            regime = "bear" if regime == "bull" else "bull"
+
+            # Set a new regime duration
+            regime_months_remaining = (
+                max(2, math.ceil(random.expovariate(1 / avg_bull_duration_months)))
+                if regime == "bull"
+                else max(2, math.ceil(random.expovariate(1 / avg_bear_duration_months)))
+            )
+
+        # if regime == "bull":
+        #     if random.random() < bull_to_bear_prob:
+        #         regime = "bear"
+        # elif regime == "bear":
+        #     if random.random() < bear_to_bull_prob:
+        #         regime = "bull"
 
         # MSTY NAV decay based on MSTY regime
         if regime == "bull":
@@ -256,9 +279,8 @@ for _ in range(epochs):
         tax = fed_tax + state_tax
 
         # Step 5: Determine draw (personal income) based on taxable income
-        if month < 4:
-            draw = 0
-        else:
+        draw = 0
+        if month >= 4:
             for amount, min_rev, max_rev in draw_tiers:
                 if min_rev <= taxable_income < max_rev:
                     draw = amount
@@ -303,6 +325,7 @@ for _ in range(epochs):
             "BTC Val": round(btc_price * btc_total, 2),
             "Loan Left": round(loan_balance, 2),
             "LTV": round(ltv, 2),
+            "CashOrMSTY": 0,
         }
         # Use cash reserves if net_cash < 0
         if net_cash < 0:
@@ -350,24 +373,30 @@ for _ in range(epochs):
         # Cash reserves are used only if net_cash goes negative.
         # Replaces older flawed logic: `dy > abs(decay)`
         # if -decay > dy:
-        if nav_risk_score >= upper_risk_threshold:
+        # if nav_risk_score > upper_risk_threshold:
+        #     # sell half of the shares.
+        #     cash_reserves += msty_shares * msty_price / 2
+        #     msty_shares /= 2
+
+        if nav_risk_score >= risk_threshold_buy:
             base_output["Stack Cash"] = 1
+            base_output["CashOrMSTY"] = 1
             # Stack cash with leftover net cash
             reserve_add = net_cash
-            cash_reserves += reserve_add
+            cash_reserves += net_cash
             net_cash = 0
             net_loss_months = 0
 
             # if ltv > target_ltv and cash_reserves > 40_000:
-            if cash_reserves > 40_000:
-                # Limit paydown to the lesser of 5% loan balance, 10% cash reserves, or a fixed max (e.g., $25k)
-                max_paydown_from_cash = min(
-                    0.05 * loan_balance,
-                    0.10 * cash_reserves,
-                    20_000,
-                )
-                loan_balance -= max_paydown_from_cash
-                cash_reserves -= max_paydown_from_cash
+            # if cash_reserves > 40_000:
+            #     # Limit paydown to the lesser of 5% loan balance, 10% cash reserves, or a fixed max (e.g., $25k)
+            #     max_paydown_from_cash = min(
+            #         0.05 * loan_balance,
+            #         0.10 * cash_reserves,
+            #         20_000,
+            #     )
+            #     loan_balance -= max_paydown_from_cash
+            #     cash_reserves -= max_paydown_from_cash
 
             if DEBUG:
                 jprint(
@@ -382,6 +411,7 @@ for _ in range(epochs):
                     sort_keys=False,
                 )
         else:
+            base_output["CashOrMSTY"] = 0
             # === Loan-Based DRIP Deployment Strategy ===
             # Calculate current max loan amount based on target LTV and BTC value
             max_loan_allowed = (target_ltv / 100) * btc_price * btc_total
@@ -401,14 +431,14 @@ for _ in range(epochs):
 
             # if cash_reserves is greater than 100k use 10% to reinvest
             reserve_reinvest = 0
-            if cash_reserves > 100_000:
-                reserve_reinvest = cash_reserves * 0.5
-            elif cash_reserves > 50_000:
-                reserve_reinvest = cash_reserves * 0.10
+            if cash_reserves > 50_000:
+                reserve_reinvest = cash_reserves * 0.1
+                cash_reserves -= reserve_reinvest
 
             reinvest_total = available_loan + reserve_reinvest
             if net_cash > 0:
                 reinvest_total += net_cash
+                net_cash = 0
 
             new_mst_shares = 0
             if reinvest_total > 0:
@@ -437,7 +467,6 @@ for _ in range(epochs):
                 )
 
         # Compound any remaining net_cash
-        # msty_shares += net_cash / msty_price if net_cash > 0 else 0
         results.append(base_output)
 
         if DEBUG:
@@ -536,8 +565,11 @@ def human_readable_log_labels(x, pos):
 
 # === Plot Y params=
 yCol1 = "Dist Yield"
-yCol1 = "Revenue"
+yCol1 = "Regime"
+# yCol1 = "CashOrMSTY"
 yCol2 = "MSTY Price"
+# yCol2 = "Regime"
+
 
 fig, ax1 = plt.subplots(figsize=(14, 6))
 ax1.plot(df["Month"], df[yCol1], label=yCol1, color="tab:blue")
