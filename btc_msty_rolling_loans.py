@@ -435,7 +435,12 @@ ending_loan = (
 )
 ending_cash = ending_row["Cash Res"] + ending_row["Net Cash"]
 ending_msty_price = ending_row["MSTY Price"]
-ending_net_worth = ending_msty_shares * ending_msty_price + ending_cash - ending_loan
+ending_net_worth = (
+    ending_row["BTC Val"]
+    + ending_msty_shares * ending_msty_price
+    + ending_cash
+    - ending_loan
+)
 print("\n--- Economic Summary (Final Month) ---")
 # locale.currency( 188518982.18, grouping=True
 print(f"Ending BTC value: {locale.currency(ending_row['BTC Val'], grouping=True)}")
