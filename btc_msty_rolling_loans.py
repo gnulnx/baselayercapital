@@ -17,9 +17,9 @@ from jprint import jprint
 
 # === Simulation Parameters ===
 months = 120  # Number of months to simulate (e.g., 10 years)
-epochs = 1000  # Number of Monte Carlo simulation runs
+epochs = 10000  # Number of Monte Carlo simulation runs
 # If True, show average results across all runs; if False, show last run only
-show_averaged_output = False
+show_averaged_output = True
 # If True, print failed runs with Decay Rate == 0.2000 for debugging
 show_failed_runs = False
 
@@ -38,7 +38,7 @@ loan_apy = 0.13  # Annual percentage yield (interest rate) for loans
 loan_origination_fee_rate = 0.0
 
 # === Regime-based Leverage Parameters ===
-target_ltv = 10  # Target LTV (%) for bull markets
+target_ltv = 0  # Target LTV (%) for bull markets
 
 btc_loan_cash = target_ltv / 100 * btc_price_init * btc_total
 dca_amount_fraction = 0.075  # Fraction of BTC loan cash to DCA monthly
