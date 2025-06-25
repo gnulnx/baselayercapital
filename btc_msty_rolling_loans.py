@@ -5,6 +5,7 @@ import locale
 import random
 from math import inf
 from uuid import uuid4
+import logging
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -14,6 +15,15 @@ from utils.taxes import monthly_federal_tax
 
 locale.setlocale(locale.LC_ALL, "")
 from jprint import jprint
+
+DEBUG = False
+# set logging level
+# if DEBUG:
+#     import logging
+
+#     logging.basicConfig(level=logging.DEBUG)
+
+# logger = logging.getLogger(__name__)
 
 # === Simulation Parameters ===
 months = 120  # Number of months to simulate (e.g., 10 years)
@@ -67,14 +77,6 @@ def duration_to_prob(months):
     return 1 / months
 
 
-# --- MSTY Regime Parameters (High/Low Volatility Phases) ---
-# Set average duration directly (in months)
-avg_bull_duration_months = 2.5  # High-volatility ("bull") phases typically short
-avg_bear_duration_months = 5  # Low-volatility ("bear") phases typically longer
-
-bull_to_bear_prob = duration_to_prob(avg_bull_duration_months)
-bear_to_bull_prob = duration_to_prob(avg_bear_duration_months)
-
 # === BTC Regime Switching Parameters ===
 # Independent BTC price regimes with separate average durations
 avg_btc_bull_duration_months = 36  # Longer bullish BTC phases
@@ -89,11 +91,18 @@ btc_bull_std_dev_growth = 0.1
 btc_bear_mean_growth = -0.03  # Monthly avg growth rate in bear markets (e.g., -2%)
 btc_bear_std_dev_growth = 0.2
 
+# --- MSTY Regime Parameters (High/Low Volatility Phases) ---
+# Set average duration directly (in months)
+avg_bull_duration_months = 3  # High-volatility ("bull") phases typically short
+avg_bear_duration_months = 5  # Low-volatility ("bear") phases typically longer
+
+bull_to_bear_prob = duration_to_prob(avg_bull_duration_months)
+bear_to_bull_prob = duration_to_prob(avg_bear_duration_months)
 # --- NAV Decay by Regime ---
 # Bull: slight positive or flat NAV (simulate modest appreciation)
-bull_mean_decay = -0.10  # Bull: -0.5% average monthly NAV decay (increase (good))
-bull_std_dev_decay = 0.04
-bear_mean_decay = 0.07  # Bear: -4% average monthly NAV decay
+bull_mean_decay = -0.07  # Bull: -0.5% average monthly NAV decay (increase (good))
+bull_std_dev_decay = 0.10
+bear_mean_decay = 0.07  # Bear: -7% average monthly NAV decay
 bear_std_dev_decay = 0.10
 
 
@@ -327,7 +336,7 @@ for _ in range(epochs):
         # - Else → DRIP into MSTY (price has likely stabilized or yield is attractive)
         # Cash reserves are used only if net_cash goes negative.
         # Replaces older flawed logic: `dy > abs(decay)`
-        if -decay > dy and cash_reserves < 400_000:
+        if -decay > dy:
             base_output["Stack Cash"] = 1
             # Stack cash with leftover net cash
             reserve_add = net_cash
@@ -345,6 +354,19 @@ for _ in range(epochs):
                 )
                 loan_balance -= max_paydown_from_cash
                 cash_reserves -= max_paydown_from_cash
+
+            if DEBUG:
+                jprint(
+                    {
+                        "Month": month,
+                        "Stacking Cash": f"{reserve_add:,.2f}",
+                        "New Cash Reserves": cash_reserves,
+                        "Net Cash": net_cash,
+                        "Loan Balance": loan_balance,
+                        "LTV": ltv,
+                    },
+                    sort_keys=False,
+                )
         else:
             # === Loan-Based DRIP Deployment Strategy ===
             # Calculate current max loan amount based on target LTV and BTC value
@@ -362,20 +384,51 @@ for _ in range(epochs):
 
             # DRIP from the loan pool
             available_loan = min(btc_loan_cash, btc_monthly_dca)
-            reinvest_total = (
-                net_cash + available_loan if net_cash > 0 else available_loan
-            )
 
+            # if cash_reserves is greater than 100k use 10% to reinvest
+            reserve_reinvest = 0
+            if cash_reserves > 100_000:
+                reserve_reinvest = cash_reserves * 0.10
+
+            reinvest_total = available_loan + reserve_reinvest
+            if net_cash > 0:
+                reinvest_total += net_cash
+
+            new_mst_shares = 0
             if reinvest_total > 0:
-                msty_shares += reinvest_total / msty_price
+                new_mst_shares += reinvest_total / msty_price
+                msty_shares += new_mst_shares
                 net_cash = 0
                 btc_loan_cash -= available_loan  # reduce pool
 
             net_loss_months += 1
 
+            if DEBUG:
+                jprint(
+                    {
+                        "Month": month,
+                        "DRIPing": f"{reinvest_total:,.2f}",
+                        "From Loan": f"{available_loan:,.2f}",
+                        "From Reserves": f"{reserve_reinvest:,.2f}",
+                        "New Shares": new_mst_shares,
+                        "Total Shares": msty_shares,
+                        "MYST price": msty_price,
+                        "Loan Balance": loan_balance,
+                        "Cash Reserves": cash_reserves,
+                        "LTV": ltv,
+                    },
+                    sort_keys=False,
+                )
+
         # Compound any remaining net_cash
         # msty_shares += net_cash / msty_price if net_cash > 0 else 0
         results.append(base_output)
+
+        if DEBUG:
+            jprint(base_output, sort_keys=False)
+            print(f"month: {month}, regime: {regime}, btc_regime: {btc_regime}")
+
+            input("press enter to continue...")
 
     for idx, row in enumerate(results):
         if idx not in avg_results:
