@@ -17,13 +17,6 @@ locale.setlocale(locale.LC_ALL, "")
 from jprint import jprint
 
 DEBUG = False
-# set logging level
-# if DEBUG:
-#     import logging
-
-#     logging.basicConfig(level=logging.DEBUG)
-
-# logger = logging.getLogger(__name__)
 
 # === Simulation Parameters ===
 months = 120  # Number of months to simulate (e.g., 10 years)
@@ -43,12 +36,11 @@ btc_price_init = 100_000  # Initial BTC price
 # Annual linear growth rate for BTC price (used for BTC LTV calculations)
 btc_growth_rate = 0.20
 
-
 loan_apy = 0.13  # Annual percentage yield (interest rate) for loans
 loan_origination_fee_rate = 0.0
 
 # === Regime-based Leverage Parameters ===
-target_ltv = 0  # Target LTV (%) for bull markets
+target_ltv = 10  # Target LTV (%) for bull markets
 
 btc_loan_cash = target_ltv / 100 * btc_price_init * btc_total
 dca_amount_fraction = 0.075  # Fraction of BTC loan cash to DCA monthly
@@ -66,6 +58,10 @@ std_dev_yield = 0.0224  # Standard deviation of monthly yield (historical)
 
 decay_low = -0.20  # Minimum monthly NAV decay (as a fraction, e.g., -0.20 = -20%)
 decay_high = 0.20  # Maximum monthly NAV decay (as a fraction)
+
+risk_look_back_months = 4
+upper_risk_threshold = 0.30
+lower_risk_threshold = 0.3
 
 # # === Regime Switching Parameters ===
 # # These control how often the simulation switches between bull and bear market regimes,
@@ -98,6 +94,7 @@ avg_bear_duration_months = 5  # Low-volatility ("bear") phases typically longer
 
 bull_to_bear_prob = duration_to_prob(avg_bull_duration_months)
 bear_to_bull_prob = duration_to_prob(avg_bear_duration_months)
+
 # --- NAV Decay by Regime ---
 # Bull: slight positive or flat NAV (simulate modest appreciation)
 bull_mean_decay = -0.07  # Bull: -0.5% average monthly NAV decay (increase (good))
@@ -182,7 +179,9 @@ for _ in range(epochs):
     net_loss_months = 0
 
     btc_price = btc_price_init
-    btc_price_history = [btc_price_init]
+    # btc_price_history = [btc_price_init]
+
+    msty_price_history = [msty_price]
 
     for month in range(1, months + 1):
         # --- MSTY Regime Switching ---
@@ -235,6 +234,10 @@ for _ in range(epochs):
         dy *= 1 - decay * 0.8  # nav decay amplifies yield
         dy = max(dist_yield_low, min(dy, dist_yield_high))  # cap yield
         msty_price *= 1 - decay
+        msty_price_history.append(msty_price)
+        if len(msty_price_history) > risk_look_back_months:
+            msty_price_history.pop(0)
+
         distribution_amount = msty_price * dy
 
         # Step 1: Calculate total revenue from MSTY distributions
@@ -328,6 +331,16 @@ for _ in range(epochs):
                     input("Simulation failed. Press Enter to continue...")
                 break
 
+        # get prices from risk_look_back_months ago
+        nav_risk_score = 0
+        if len(msty_price_history) >= risk_look_back_months:
+            rolling_high = max(msty_price_history)
+            rolling_low = min(msty_price_history)
+            range_width = rolling_high - rolling_low
+            nav_risk_score = (
+                (msty_price - rolling_low) / range_width if range_width > 0 else 0.5
+            )
+
         # === Reinvestment Strategy ===
         # - If NAV growth (-decay) > yield → stack cash (avoid buying tops)
         #     Rationale: During strong NAV appreciation (e.g., MSTR surge),
@@ -336,7 +349,8 @@ for _ in range(epochs):
         # - Else → DRIP into MSTY (price has likely stabilized or yield is attractive)
         # Cash reserves are used only if net_cash goes negative.
         # Replaces older flawed logic: `dy > abs(decay)`
-        if -decay > dy:
+        # if -decay > dy:
+        if nav_risk_score >= upper_risk_threshold:
             base_output["Stack Cash"] = 1
             # Stack cash with leftover net cash
             reserve_add = net_cash
@@ -388,6 +402,8 @@ for _ in range(epochs):
             # if cash_reserves is greater than 100k use 10% to reinvest
             reserve_reinvest = 0
             if cash_reserves > 100_000:
+                reserve_reinvest = cash_reserves * 0.5
+            elif cash_reserves > 50_000:
                 reserve_reinvest = cash_reserves * 0.10
 
             reinvest_total = available_loan + reserve_reinvest
