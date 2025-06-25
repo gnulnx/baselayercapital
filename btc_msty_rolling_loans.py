@@ -374,7 +374,7 @@ for _ in range(epochs):
             net_loss_months += 1
 
         # Compound any remaining net_cash
-        msty_shares += net_cash / msty_price if net_cash > 0 else 0
+        # msty_shares += net_cash / msty_price if net_cash > 0 else 0
         results.append(base_output)
 
     for idx, row in enumerate(results):
@@ -447,11 +447,8 @@ print(f"Ending Net Cash: ${ending_row['Net Cash']:,.2f}")
 print(f"Ending Cash (Reserves + Net): ${ending_cash:,.2f}")
 print(f"Ending Net Worth: ${ending_net_worth:,.2f}")
 
-jprint(params)
+# jprint(params)
 # create a hash of the parameters for reproducibility
-params_hash = uuid4(hashlib.sha256(str(params).encode()).hexdigest()).hex()
-print(f"\nParameters Hash: {params_hash}\n")
-input()
 
 
 def human_readable_log_labels(x, pos):
