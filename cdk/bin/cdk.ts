@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import * as dotenv from 'dotenv'
-dotenv.config({ path: '.env.dev', override: true }) // Hard default to .env.dev for local development for NOW
+dotenv.config({ path: '.env.dev', override: true }) // Hard default to .env.dev for local development
 
 import * as cdk from 'aws-cdk-lib'
+import { MainStack } from '../lib/main-stack'
 import { TablesStack } from '../lib/tables'
 
 // === Read environment ===
@@ -17,16 +18,13 @@ if (!ACCOUNT || !REGION || !PROFILE) {
 }
 
 // === CDK App config ===
-let dynamoRemovalPolicy = cdk.RemovalPolicy.DESTROY
+let dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
 let deleteProtection = false
 
 if (ENV_TYPE === 'prd') {
   dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
   deleteProtection = true
 }
-
-// Always use RETAIN for now
-dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
 
 const stackProps = {
   env: { account: ACCOUNT, region: REGION },
@@ -37,6 +35,12 @@ const stackProps = {
   pointInTimeRecovery: ENV_TYPE === 'prd',
 }
 
-// === CDK App ===
+// === CDK App + Stack Composition ===
 const app = new cdk.App()
-new TablesStack(app, `${ENV_NAME}-BtcTablesStack`, stackProps)
+
+const tables = new TablesStack(app, `${ENV_NAME}-BtcTablesStack`, stackProps)
+
+new MainStack(app, `${ENV_NAME}-MainStack`, {
+  ...stackProps,
+  tables,
+})

@@ -11,6 +11,8 @@ interface TablesStackProps extends StackProps {
 }
 
 export class TablesStack extends Stack {
+  public readonly historicalDataTable: dynamodb.Table
+
   constructor(scope: Construct, id: string, props: TablesStackProps) {
     super(scope, id, props)
 
@@ -28,7 +30,7 @@ export class TablesStack extends Stack {
       },
     })
 
-    new dynamodb.Table(this, `${ENV_NAME}-HistoricalData`, {
+    this.historicalDataTable = new dynamodb.Table(this, `${ENV_NAME}-HistoricalData`, {
       tableName: `${ENV_NAME}-HistoricalData`,
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
