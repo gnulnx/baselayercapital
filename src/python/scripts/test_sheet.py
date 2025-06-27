@@ -9,7 +9,7 @@ client = gspread.authorize(creds)
 
 # Replace with your actual spreadsheet key
 sheet = client.open_by_key("121IKOMNzhxJfcci-QifPw6p3aYabzalMH6w2iB8ueAU")
-worksheet = sheet.worksheet("Accounts Overview")
+worksheet = sheet.worksheet("MSTY Tracker")
 # Just get all values
 raw_data = worksheet.get_all_values()
 
