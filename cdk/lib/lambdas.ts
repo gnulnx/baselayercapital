@@ -61,7 +61,7 @@ export class Lambdas {
       { id: 'Noon', cron: events.Schedule.cron({ minute: '0', hour: '17' }) }, // 12pm EST
       { id: 'Afternoon', cron: events.Schedule.cron({ minute: '10', hour: '21' }) }, // 4:10pm EST
       // ⚠️ Temporary test schedule — runs every minute
-      { id: 'TestEveryMinute', cron: events.Schedule.rate(cdk.Duration.minutes(1)) },
+      //   { id: 'TestEveryMinute', cron: events.Schedule.rate(cdk.Duration.minutes(1)) },
     ]
 
     for (const { id, cron } of schedules) {

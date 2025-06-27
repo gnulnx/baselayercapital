@@ -2,6 +2,7 @@ from fetch_symbol_div_info import (
     get_yahoo_history,
     fetch_yield_max_distributions,
     fetch_bitwise_distributions,
+    init_env,
 )
 
 YMTickers = ["MSTY"]
@@ -11,6 +12,7 @@ BitWiseTickers = {
 
 
 def handler(event=None, context=None):
+    init_env()
     tickers = YMTickers + list(BitWiseTickers.keys())
 
     for ticker in tickers:
