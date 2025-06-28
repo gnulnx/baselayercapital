@@ -13,7 +13,7 @@ BitWiseTickers = {
 
 def handler(event=None, context=None):
     init_env()
-    tickers = YMTickers + list(BitWiseTickers.keys())
+    tickers = YMTickers + list(BitWiseTickers.keys()) + ["MSTR"]
 
     for ticker in tickers:
         print(f"Fetching data for {ticker}...")

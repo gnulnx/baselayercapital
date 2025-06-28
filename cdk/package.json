@@ -8,7 +8,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk",
+    "cdk": "dotenv -e .env.dev -- bash -c 'cdk \"$@\"' --",
     "deploy": "dotenv -e .env.dev -- cdk deploy --all --require-approval never"
   },
   "devDependencies": {

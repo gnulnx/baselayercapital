@@ -3,6 +3,7 @@ import { Stack, StackProps } from 'aws-cdk-lib'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import { Lambdas } from './lambdas'
 import { TablesStack } from './tables'
+import { LambdaLayerStack } from '../lib/lambda-layer-stack'
 
 interface MainStackProps extends StackProps {
   env: {
@@ -15,6 +16,7 @@ interface MainStackProps extends StackProps {
   deleteProtection: boolean
   pointInTimeRecovery: boolean
   tables: TablesStack
+  layers: LambdaLayerStack
 }
 
 export class MainStack extends Stack {
@@ -23,9 +25,9 @@ export class MainStack extends Stack {
   constructor(scope: Construct, id: string, props: MainStackProps) {
     super(scope, id, props)
 
-    const { ENV_NAME, ENV_TYPE, tables } = props
+    const { ENV_NAME, ENV_TYPE, tables, layers } = props
 
-    const logRetention = logs.RetentionDays.ONE_WEEK
+    const logRetention = logs.RetentionDays.ONE_DAY
 
     this.lambdas = new Lambdas(this, `${ENV_NAME}-Lambdas`, {
       env: props.env,
@@ -33,6 +35,7 @@ export class MainStack extends Stack {
       ENV_TYPE,
       tables,
       logRetention,
+      layers,
     })
   }
 }

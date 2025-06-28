@@ -5,6 +5,13 @@ dotenv.config({ path: '.env.dev', override: true }) // Hard default to .env.dev 
 import * as cdk from 'aws-cdk-lib'
 import { MainStack } from '../lib/main-stack'
 import { TablesStack } from '../lib/tables'
+import { LambdaLayerStack } from '../lib/lambda-layer-stack'
+import { execSync } from 'child_process'
+
+execSync(
+  'aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws',
+  { stdio: 'inherit' },
+)
 
 // === Read environment ===
 const ENV_NAME = process.env.ENV_NAME || 'dev'
@@ -38,9 +45,12 @@ const stackProps = {
 // === CDK App + Stack Composition ===
 const app = new cdk.App()
 
+const layers = new LambdaLayerStack(app, `${ENV_NAME}-BLCLambdaLayerStack`, stackProps)
+
 const tables = new TablesStack(app, `${ENV_NAME}-BtcTablesStack`, stackProps)
 
 new MainStack(app, `${ENV_NAME}-MainStack`, {
   ...stackProps,
   tables,
+  layers,
 })

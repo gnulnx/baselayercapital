@@ -7,6 +7,7 @@ import { TablesStack } from './tables'
 import * as events from 'aws-cdk-lib/aws-events'
 import * as targets from 'aws-cdk-lib/aws-events-targets'
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha'
+import { LambdaLayerStack } from '../lib/lambda-layer-stack'
 
 interface LambdasProps {
   env: {
@@ -17,13 +18,14 @@ interface LambdasProps {
   ENV_TYPE: string
   tables: TablesStack
   logRetention: logs.RetentionDays
+  layers: LambdaLayerStack
 }
 
 export class Lambdas {
   public readonly fetchDataLambda: lambda.Function
 
   constructor(scope: Construct, id: string, props: LambdasProps) {
-    const { ENV_NAME, ENV_TYPE, tables, logRetention, env } = props
+    const { ENV_NAME, ENV_TYPE, tables, logRetention, env, layers } = props
 
     const lambdaRole = new iam.Role(scope, `${ENV_NAME}-LambdaExecutionRole`, {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -51,6 +53,7 @@ export class Lambdas {
       logRetention,
       environment,
       role: lambdaRole,
+      layers: [layers.common],
     })
 
     tables.historicalDataTable.grantReadWriteData(this.fetchDataLambda)
@@ -60,9 +63,9 @@ export class Lambdas {
       //    cron({ minute: '0', hour: '*' })
       { id: 'every 15 minutes', cron: events.Schedule.rate(cdk.Duration.minutes(15)) }, // every 15 minutes
 
-      { id: 'Morning', cron: events.Schedule.cron({ minute: '0', hour: '12' }) }, // 7am EST
-      { id: 'Noon', cron: events.Schedule.cron({ minute: '0', hour: '17' }) }, // 12pm EST
-      { id: 'Afternoon', cron: events.Schedule.cron({ minute: '10', hour: '21' }) }, // 4:10pm EST
+      //   { id: 'Morning', cron: events.Schedule.cron({ minute: '0', hour: '12' }) }, // 7am EST
+      //   { id: 'Noon', cron: events.Schedule.cron({ minute: '0', hour: '17' }) }, // 12pm EST
+      //   { id: 'Afternoon', cron: events.Schedule.cron({ minute: '10', hour: '21' }) }, // 4:10pm EST
       // ⚠️ Temporary test schedule — runs every minute
       //   { id: 'TestEveryMinute', cron: events.Schedule.rate(cdk.Duration.minutes(1)) },
     ]
