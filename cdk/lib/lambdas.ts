@@ -57,6 +57,9 @@ export class Lambdas {
 
     // schedule the Lambda function to run at specific times
     const schedules = [
+      //    cron({ minute: '0', hour: '*' })
+      { id: 'every 15 minutes', cron: events.Schedule.rate(cdk.Duration.minutes(15)) }, // every 15 minutes
+
       { id: 'Morning', cron: events.Schedule.cron({ minute: '0', hour: '12' }) }, // 7am EST
       { id: 'Noon', cron: events.Schedule.cron({ minute: '0', hour: '17' }) }, // 12pm EST
       { id: 'Afternoon', cron: events.Schedule.cron({ minute: '10', hour: '21' }) }, // 4:10pm EST

@@ -1,5 +1,6 @@
 import argparse
 from decimal import Decimal
+from datetime import datetime, UTC
 import boto3
 import yfinance as yf
 import pandas as pd
@@ -25,7 +26,11 @@ def init_env():
     print(f"✅ Using DynamoDB table: {HistoricalDataTableName} in {AWS_REGION}")
 
 
-def get_yahoo_history(ticker: str, start: str = "2015-06-19") -> pd.DataFrame:
+def now_utc_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def get_yahoo_history(ticker: str) -> pd.DataFrame:
     ticker_obj = yf.Ticker(ticker)
     df = ticker_obj.history(period="max", auto_adjust=False)
 
@@ -36,7 +41,7 @@ def get_yahoo_history(ticker: str, start: str = "2015-06-19") -> pd.DataFrame:
     return df
 
 
-def write_to_dynamo(df: pd.DataFrame, ticker: str, sk_prefix: str = "PRICE#"):
+def write_to_dynamo(df: pd.DataFrame, ticker: str, ts: str, sk_prefix: str = "PRICE#"):
     with HistoricalDataTable.batch_writer(overwrite_by_pkeys=["PK", "SK"]) as batch:
         for _, row in df.iterrows():
             if pd.isna(row["close"]):
@@ -46,6 +51,7 @@ def write_to_dynamo(df: pd.DataFrame, ticker: str, sk_prefix: str = "PRICE#"):
             item = {
                 "PK": ticker,
                 "SK": f"{sk_prefix}{date_str}",
+                "last_updated": ts,
                 "open": Decimal(str(row["open"])) if not pd.isna(row["open"]) else None,
                 "high": Decimal(str(row["high"])) if not pd.isna(row["high"]) else None,
                 "low": Decimal(str(row["low"])) if not pd.isna(row["low"]) else None,
@@ -73,7 +79,7 @@ def write_to_dynamo(df: pd.DataFrame, ticker: str, sk_prefix: str = "PRICE#"):
     print(f"Wrote {len(df)} items to {HistoricalDataTableName}.")
 
 
-def fetch_yield_max_distributions(ticker: str) -> pd.DataFrame:
+def fetch_yield_max_distributions(ticker: str, ts: str) -> pd.DataFrame:
     """
     Scrapes YieldMax distribution table from the given URL and returns a DataFrame.
     """
@@ -116,6 +122,7 @@ def fetch_yield_max_distributions(ticker: str) -> pd.DataFrame:
                 {
                     "ticker": ticker,
                     "amount": float(amount),
+                    "last_updated": ts,
                     "declared_date": pd.to_datetime(declared).strftime("%Y-%m-%d"),
                     "ex_date": pd.to_datetime(ex).strftime("%Y-%m-%d"),
                     "record_date": pd.to_datetime(record).strftime("%Y-%m-%d"),
@@ -131,7 +138,7 @@ def fetch_yield_max_distributions(ticker: str) -> pd.DataFrame:
         for _, row in df.iterrows():
             if pd.isna(row["amount"]) or row["amount"] <= 0:
                 print(f"⚠️ Skipping row with invalid amount: {row['amount']}")
-                input("Press Enter to continue...")
+                # input("Press Enter to continue...")
                 continue
 
             item = {
@@ -152,7 +159,7 @@ def fetch_yield_max_distributions(ticker: str) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-def fetch_bitwise_distributions(ticker: str, url: str) -> pd.DataFrame:
+def fetch_bitwise_distributions(ticker: str, url: str, ts: str) -> pd.DataFrame:
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
 
@@ -232,11 +239,13 @@ def main():
     print(f"Fetching price and dividend history for {args.ticker}...")
     df = get_yahoo_history(args.ticker)
 
+    ts = now_utc_iso()
+
     if args.ticker in YMTickers:
-        df = fetch_yield_max_distributions(args.ticker)
+        df = fetch_yield_max_distributions(args.ticker, ts=ts)
     elif args.ticker in BitWiseTickers:
         url = BitWiseTickers[args.ticker]
-        df = fetch_bitwise_distributions(args.ticker, url)
+        df = fetch_bitwise_distributions(args.ticker, url, ts=ts)
 
     print(f"Write {len(df)} distribution records to DynamoDB.")
 
