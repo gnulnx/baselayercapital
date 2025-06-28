@@ -36,6 +36,13 @@ def get_yahoo_history(ticker: str, start: str = "2015-06-19") -> pd.DataFrame:
     return df
 
 
+def safe_decimal(value):
+    """
+    Convert a value to Decimal, handling NaN values.
+    """
+    return Decimal(str(value)) if not pd.isna(value) else None
+
+
 def write_to_dynamo(df: pd.DataFrame, ticker: str, sk_prefix: str = "PRICE#"):
     with HistoricalDataTable.batch_writer(overwrite_by_pkeys=["PK", "SK"]) as batch:
         for _, row in df.iterrows():
@@ -46,23 +53,17 @@ def write_to_dynamo(df: pd.DataFrame, ticker: str, sk_prefix: str = "PRICE#"):
             item = {
                 "PK": ticker,
                 "SK": f"{sk_prefix}{date_str}",
-                "open": Decimal(str(row["open"])) if not pd.isna(row["open"]) else None,
-                "high": Decimal(str(row["high"])) if not pd.isna(row["high"]) else None,
-                "low": Decimal(str(row["low"])) if not pd.isna(row["low"]) else None,
-                "close": Decimal(str(row["close"])),
-                "adjclose": Decimal(str(row["adjclose"]))
-                if not pd.isna(row["adjclose"])
+                "open": safe_decimal(row.get("open")),
+                "high": safe_decimal(row.get("high")),
+                "low": safe_decimal(row.get("low")),
+                "close": safe_decimal(row.get("close")),
+                "adjclose": safe_decimal(row.get("adjclose")),
+                "volume": int(row["volume"])
+                if not pd.isna(row.get("volume"))
                 else None,
-                "volume": int(row["volume"]) if not pd.isna(row["volume"]) else None,
-                "dividend": Decimal(str(row["dividends"]))
-                if not pd.isna(row["dividends"])
-                else None,
-                "stocksplits": Decimal(str(row["stocksplits"]))
-                if not pd.isna(row["stocksplits"])
-                else None,
-                "capitalgains": Decimal(str(row["capitalgains"]))
-                if not pd.isna(row["capitalgains"])
-                else None,
+                "dividend": safe_decimal(row.get("dividends")),
+                "stocksplits": safe_decimal(row.get("stocksplits")),
+                "capitalgains": safe_decimal(row.get("capitalgains")),
             }
 
             # Remove any None values for a clean DynamoDB write
