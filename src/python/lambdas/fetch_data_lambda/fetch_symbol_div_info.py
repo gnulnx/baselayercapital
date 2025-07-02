@@ -22,8 +22,6 @@ def init_env():
     dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
     HistoricalDataTable = dynamodb.Table(HistoricalDataTableName)
 
-    print(f"✅ Using DynamoDB table: {HistoricalDataTableName} in {AWS_REGION}")
-
 
 def get_yahoo_history(ticker: str, start: str = "2015-06-19") -> pd.DataFrame:
     ticker_obj = yf.Ticker(ticker)
@@ -71,7 +69,7 @@ def write_to_dynamo(df: pd.DataFrame, ticker: str, sk_prefix: str = "PRICE#"):
 
             batch.put_item(Item=item)
 
-    print(f"Wrote {len(df)} items to {HistoricalDataTableName}.")
+    print(f"Wrote {len(df)} items to {HistoricalDataTableName}. for ticker {ticker}")
 
 
 def fetch_yield_max_distributions(ticker: str) -> pd.DataFrame:

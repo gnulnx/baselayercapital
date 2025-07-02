@@ -16,12 +16,13 @@ def handler(event=None, context=None):
     tickers = YMTickers + list(BitWiseTickers.keys()) + ["MSTR"]
 
     for ticker in tickers:
-        print(f"Fetching data for {ticker}...")
         get_yahoo_history(ticker)
 
         if ticker in YMTickers:
             fetch_yield_max_distributions(ticker)
         elif ticker in BitWiseTickers:
             fetch_bitwise_distributions(ticker, BitWiseTickers[ticker])
+
+    print("All tickers processed successfully.")
 
     return {"status": "success", "tickers": tickers}

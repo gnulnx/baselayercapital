@@ -18,8 +18,6 @@ def init_env():
     dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
     StrategyKPIsTable = dynamodb.Table(StrategyKPIsTableName)
 
-    print(f"✅ Using DynamoDB table: {StrategyKPIsTableName} in {AWS_REGION}")
-
 
 def fetch_json(url):
     headers = {
@@ -157,7 +155,6 @@ def write_kpi_to_dynamo(ticker: str, data: dict):
     item = {k: v for k, v in item.items() if v is not None}
 
     StrategyKPIsTable.put_item(Item=item)
-    print(f"✅ Wrote {ticker} at {data['timestamp']}")
 
 
 def handler(event=None, context=None):
@@ -168,6 +165,7 @@ def handler(event=None, context=None):
     write_kpi_to_dynamo("STRD", strd)
     write_kpi_to_dynamo("STRK", strk)
 
+    print("✅ Strategy KPIs fetched and stored successfully.")
     return {
         "status": "success",
         "data": {
