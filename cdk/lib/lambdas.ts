@@ -23,6 +23,7 @@ interface LambdasProps {
 
 export class Lambdas {
   public readonly fetchDataLambda: lambda.Function
+  public readonly fetchStrategyKPIs: lambda.Function
 
   constructor(scope: Construct, id: string, props: LambdasProps) {
     const { ENV_NAME, ENV_TYPE, tables, logRetention, env, layers } = props
@@ -47,7 +48,7 @@ export class Lambdas {
       memorySize: 512,
       timeout: cdk.Duration.seconds(30),
       architecture: lambda.Architecture.ARM_64,
-      entry: '../src/python/lambdas/',
+      entry: '../src/python/lambdas/fetch_data_lambda',
       index: 'fetch_data_lambda.py',
       handler: 'handler',
       logRetention,
@@ -57,6 +58,23 @@ export class Lambdas {
     })
 
     tables.historicalDataTable.grantReadWriteData(this.fetchDataLambda)
+
+    this.fetchStrategyKPIs = new PythonFunction(scope, `${ENV_NAME}-fetchStrategyKPIs`, {
+      functionName: `${ENV_NAME}-fetchStrategyKPIs`,
+      runtime: lambda.Runtime.PYTHON_3_12,
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(30),
+      architecture: lambda.Architecture.ARM_64,
+      entry: '../src/python/lambdas/fetch_strategy_kpis_lambda',
+      index: 'fetch_strategy_kpis_lambda.py',
+      handler: 'handler',
+      logRetention,
+      environment,
+      role: lambdaRole,
+      layers: [layers.common],
+    })
+
+    tables.mstrKpiTable.grantReadWriteData(this.fetchStrategyKPIs)
 
     // schedule the Lambda function to run at specific times
     const schedules = [
@@ -77,6 +95,7 @@ export class Lambdas {
       })
 
       rule.addTarget(new targets.LambdaFunction(this.fetchDataLambda))
+      rule.addTarget(new targets.LambdaFunction(this.fetchStrategyKPIs))
     }
   }
 }
