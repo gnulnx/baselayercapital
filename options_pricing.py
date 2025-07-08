@@ -2,75 +2,91 @@
 import sys
 import csv
 from collections import defaultdict
-from tabulate import tabulate
+from rich.table import Table
+from rich.console import Console
+from rich import box
 
+console = Console()
 input_file = sys.argv[1]
 
+UNDERLYING_PRICE = 54.30  # ← Update this manually for now
+
 HEADERS = [
-    "Put_Bid",
-    "Put_Ask",
-    "Put_Mid",
-    "Put_Change",
-    "Put_Vol",
-    "Put_OI",
-    "Put_Delta",
-    "Strike",
     "Call_Bid",
     "Call_Ask",
-    "Call_Mid",
+    "Call_Last",
     "Call_Change",
     "Call_Vol",
     "Call_OI",
     "Call_Delta",
+    "Strike",
+    "Put_Bid",
+    "Put_Ask",
+    "Put_Last",
+    "Put_Change",
+    "Put_Vol",
+    "Put_OI",
+    "Put_Delta",
 ]
 
-output_rows = []
-current_expiry = ""
 options_by_expiry = defaultdict(list)
+current_expiry = ""
 
 with open(input_file, "r") as f:
     for line in f:
         stripped = line.strip()
         if not stripped or stripped.startswith("More") or stripped.startswith("Select"):
             continue
-        if "Jul." in stripped or "Aug." in stripped or "Sep." in stripped:
+        if any(month in stripped for month in ["Jul.", "Aug.", "Sep."]):
             current_expiry = stripped
             continue
         fields = stripped.split()
         if len(fields) == 15:
-            row = [current_expiry] + fields
-            options_by_expiry[current_expiry].append(row)
-            output_rows.append(row)
+            options_by_expiry[current_expiry].append(fields)
 
-# Display tables with ITM flags
-UNDERLYING_PRICE = 55.25  # Set this manually or dynamically from source
+
+def colorize(text, color):
+    return f"[{color}]{text}[/{color}]"
+
 
 for expiry in options_by_expiry:
-    print(f"\n📅 {expiry}")
-    table = []
+    console.print(f"\n📅 [bold yellow]{expiry}[/bold yellow]")
+    table = Table(box=box.SIMPLE_HEAVY, expand=False)
+    for header in HEADERS:
+        table.add_column(header, justify="right", style="white", no_wrap=True)
+
     for row in options_by_expiry[expiry]:
-        strike = float(row[8])
-        call_mid = float(row[11])
-        put_mid = float(row[3])
+        strike = float(row[7])
+        # put_bid, put_ask, put_mid = float(row[0]), float(row[1]), float(row[2])
+        # call_bid, call_ask, call_mid = float(row[8]), float(row[9]), float(row[10])
 
-        # Highlight ITM options
-        call_tag = "*" if strike < UNDERLYING_PRICE else ""
-        put_tag = "*" if strike > UNDERLYING_PRICE else ""
+        call_bid, call_ask, call_mid = float(row[0]), float(row[1]), float(row[2])
+        put_bid, put_ask, put_mid = float(row[8]), float(row[9]), float(row[10])
 
-        row[8] = f"{strike:.2f}{call_tag}"  # Strike
-        row[11] = f"{call_mid:.2f}{call_tag}"  # Call Mid
-        row[3] = f"{put_mid:.2f}{put_tag}"  # Put Mid
+        is_put_itm = strike < UNDERLYING_PRICE
+        is_call_itm = strike > UNDERLYING_PRICE
 
-        table.append(row)
+        # Apply color to entire side if ITM
+        if is_put_itm:
+            row[0] = colorize(row[0], "cyan")
+            row[1] = colorize(row[1], "cyan")
+            row[2] = colorize(row[2], "cyan")
+            row[3] = colorize(row[3], "cyan")
+            row[4] = colorize(row[4], "cyan")
+            row[5] = colorize(row[5], "cyan")
+            row[6] = colorize(row[6], "cyan")
+        if is_call_itm:
+            row[8] = colorize(row[8], "cyan")
+            row[9] = colorize(row[9], "cyan")
+            row[10] = colorize(row[10], "cyan")
+            row[11] = colorize(row[11], "cyan")
+            row[12] = colorize(row[12], "cyan")
+            row[13] = colorize(row[13], "cyan")
+            row[14] = colorize(row[14], "cyan")
+            # row[15] = colorize(row[15], "cyan")
 
-    headers = ["Expiry"] + HEADERS
-    print(tabulate(table, headers=headers, tablefmt="pretty"))
+        row[7] = colorize(row[7], "green")
 
-# Optional: Save to CSV if 2nd arg is given
-if len(sys.argv) > 2:
-    output_csv = sys.argv[2]
-    with open(output_csv, "w", newline="") as f_out:
-        writer = csv.writer(f_out)
-        writer.writerow(["Expiry"] + HEADERS)
-        writer.writerows(output_rows)
-    print(f"\n✅ CSV saved to: {output_csv}")
+        table.add_row(*row)
+
+    console.print(table)
