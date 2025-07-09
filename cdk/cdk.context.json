@@ -1,5 +1,9 @@
 {
   "acknowledged-issue-numbers": [
     31885
-  ]
+  ],
+  "hosted-zone:account=740239033577:domainName=baselayercapital.com:region=us-east-1": {
+    "Id": "/hostedzone/Z0015026YKGMWRCKYZQ2",
+    "Name": "baselayercapital.com."
+  }
 }

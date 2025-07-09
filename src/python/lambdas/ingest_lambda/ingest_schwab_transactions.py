@@ -28,11 +28,10 @@ def parse_quantity(value):
 
 
 def normalize_date_field(date_str):
-    if "as of" in date_str:
-        date_str = date_str.split("as of")[-1].strip()
     try:
         return datetime.strptime(date_str, "%m/%d/%Y").date().isoformat()
-    except ValueError:
+    except ValueError as e:
+        print(f"Error parsing date '{date_str}': {e}")
         return None
 
 
@@ -48,9 +47,20 @@ def generate_sk(effective_date, symbol, action):
 def write_transactions_to_dynamo(transactions):
     with TransactionsTable.batch_writer(overwrite_by_pkeys=["PK"]) as batch:
         for txn in transactions:
-            effective_date = normalize_date_field(txn["Date"])
-            posted_date = normalize_date_field(txn["Date"].split("as of")[0])
-            pk = str(uuid.uuid4())
+            if "as of" in txn["Date"]:
+                effective_date = normalize_date_field(
+                    txn["Date"].split("as of")[1].strip()
+                )
+                posted_date = normalize_date_field(
+                    txn["Date"].split("as of")[0].strip()
+                )
+            else:
+                # Fallback if "as of" is not present
+                effective_date = normalize_date_field(txn["Date"])
+                posted_date = effective_date
+
+            pk = uuid.uuid3(uuid.NAMESPACE_DNS, json.dumps(txn)).hex
+            # pk = str(uuid.uuid4())
             sk = generate_sk(effective_date, txn.get("Symbol"), txn.get("Action"))
 
             item = {

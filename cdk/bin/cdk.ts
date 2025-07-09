@@ -6,6 +6,7 @@ import * as cdk from 'aws-cdk-lib'
 import { MainStack } from '../lib/main-stack'
 import { TablesStack } from '../lib/tables'
 import { LambdaLayerStack } from '../lib/lambda-layer-stack'
+import { FrontendStack } from '../lib/front-end-stack'
 import { execSync } from 'child_process'
 
 execSync(
@@ -53,4 +54,9 @@ new MainStack(app, `${ENV_NAME}-MainStack`, {
   ...stackProps,
   tables,
   layers,
+})
+
+new FrontendStack(app, `${ENV_NAME}-FrontendStack`, {
+  ...stackProps,
+  env: { account: ACCOUNT, region: REGION },
 })
