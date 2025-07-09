@@ -24,6 +24,7 @@ interface LambdasProps {
 export class Lambdas {
   public readonly fetchDataLambda: lambda.Function
   public readonly fetchStrategyKPIs: lambda.Function
+  public readonly ingestLambda: lambda.Function
 
   constructor(scope: Construct, id: string, props: LambdasProps) {
     const { ENV_NAME, ENV_TYPE, tables, logRetention, env, layers } = props
@@ -41,6 +42,22 @@ export class Lambdas {
       ENV_TYPE,
       TABLE_NAME: tables.historicalDataTable.tableName,
     }
+
+    this.ingestLambda = new PythonFunction(scope, `${ENV_NAME}-IngestLambda`, {
+      functionName: `${ENV_NAME}-IngestLambda`,
+      runtime: lambda.Runtime.PYTHON_3_12,
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(30),
+      architecture: lambda.Architecture.ARM_64,
+      entry: '../src/python/lambdas/ingest_lambda',
+      index: 'ingest_schwab_transactions.py',
+      handler: 'handler',
+      logRetention,
+      environment,
+      role: lambdaRole,
+      layers: [layers.common],
+    })
+    tables.TxnTable.grantReadWriteData(this.ingestLambda)
 
     this.fetchDataLambda = new PythonFunction(scope, `${ENV_NAME}-FetchDataLambda`, {
       functionName: `${ENV_NAME}-FetchDataLambda`,

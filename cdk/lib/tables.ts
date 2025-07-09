@@ -13,15 +13,15 @@ interface TablesStackProps extends StackProps {
 export class TablesStack extends Stack {
   public readonly historicalDataTable: dynamodb.Table
   public readonly mstrKpiTable: dynamodb.Table
+  public readonly TxnTable: dynamodb.Table
 
   constructor(scope: Construct, id: string, props: TablesStackProps) {
     super(scope, id, props)
 
     const { ENV_NAME, dynamoRemovalPolicy, pointInTimeRecovery } = props
 
-    // === BLCEvents Table (Singel Table Design) ===
-    new dynamodb.Table(this, `${ENV_NAME}-BLCEventTable`, {
-      tableName: `${ENV_NAME}-BLCEventTable`,
+    this.TxnTable = new dynamodb.Table(this, `${ENV_NAME}-Transactions`, {
+      tableName: `${ENV_NAME}-Transactions`,
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
