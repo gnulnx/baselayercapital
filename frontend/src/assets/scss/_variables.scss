@@ -1,0 +1,6 @@
+// _variables.scss
+$nav-height: 30px;
+$nav-top-offset: 1rem; // the gap you like at the top
+
+// Composite value used for layout offsets
+$nav-total-offset: calc(#{$nav-top-offset} + #{$nav-height});

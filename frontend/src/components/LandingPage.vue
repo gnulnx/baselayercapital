@@ -4,6 +4,7 @@
     <p class=" tagline">
         Volatility is Vitality
     </p>
+    
 
     <svg class="ekg-line" viewBox="0 0 500 100" preserveAspectRatio="none">
         <polyline 
@@ -38,18 +39,20 @@
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/assets/scss/variables.scss' as *;
+
 .landing-container {
   position: fixed;
-  inset: 0;
+  inset: $nav-total-offset 0 0 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-
   text-align: center;
   padding: 2rem;
   box-sizing: border-box;
+//   border: 1px solid red;
 }
 
 .logo {
@@ -93,9 +96,13 @@
   max-width: 500px;
   height: 100px;
   margin-top: 20px;
-  margin-left: 150px;
+  margin-left: 90px;
 }
-
+@media (min-width: 1200px) {
+  .ekg-line {
+    margin-left: 150px;
+  }
+}
 </style>
 
 <script setup lang="ts">
