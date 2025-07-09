@@ -60,7 +60,6 @@ def write_transactions_to_dynamo(transactions):
                 posted_date = effective_date
 
             pk = uuid.uuid3(uuid.NAMESPACE_DNS, json.dumps(txn)).hex
-            # pk = str(uuid.uuid4())
             sk = generate_sk(effective_date, txn.get("Symbol"), txn.get("Action"))
 
             item = {
