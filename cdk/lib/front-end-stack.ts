@@ -33,9 +33,6 @@ export class FrontendStack extends cdk.Stack {
     // S3 bucket to store the frontend assets
     const bucket = new s3.Bucket(this, `${ENV_NAME}-BLCFEBucket`, {
       bucketName: `${ENV_NAME}.baselayercapital.com`,
-      //   websiteIndexDocument: 'index.html',
-      //   websiteErrorDocument: 'index.html',
-      // publicReadAccess: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -84,38 +81,6 @@ export class FrontendStack extends cdk.Stack {
       ],
     })
 
-    // const distribution = new cloudfront.CloudFrontWebDistribution(
-    //   this,
-    //   `${ENV_NAME}-BLC-Distribution`,
-    //   {
-    //     comment: `${ENV_NAME} distribution for FE ${domainName}`,
-    //     originConfigs: [
-    //       {
-    //         s3OriginSource: {
-    //           s3BucketSource: bucket,
-    //           originAccessIdentity: oai,
-    //         },
-    //         behaviors: [{ isDefaultBehavior: true }],
-    //       },
-    //     ],
-    //     viewerCertificate: cloudfront.ViewerCertificate.fromAcmCertificate(certificate, {
-    //       aliases: [domainName],
-    //     }),
-    //     errorConfigurations: [
-    //       {
-    //         errorCode: 403,
-    //         responsePagePath: '/index.html',
-    //         responseCode: 200,
-    //       },
-    //       {
-    //         errorCode: 404,
-    //         responsePagePath: '/index.html',
-    //         responseCode: 200,
-    //       },
-    //     ],
-    //   },
-    // )
-
     // Route 53 DNS record
     const zone = route53.HostedZone.fromLookup(this, `${ENV_NAME}-BLC-HostedZone`, {
       domainName: 'baselayercapital.com',
@@ -131,9 +96,7 @@ export class FrontendStack extends cdk.Stack {
 
     // Deploy site contents to S3 bucket
     new s3deploy.BucketDeployment(this, `${ENV_NAME}-BLC-DeployWithInvalidation`, {
-      //   sources: [s3deploy.Source.asset('../../frontend/dist')],
       sources: [s3deploy.Source.asset(path.resolve(__dirname, '../../frontend/dist'))],
-
       destinationBucket: bucket,
       distribution,
       distributionPaths: ['/*'],
