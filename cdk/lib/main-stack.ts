@@ -4,9 +4,9 @@ import * as logs from 'aws-cdk-lib/aws-logs'
 import { Lambdas } from './lambdas'
 import { TablesStack } from './tables'
 import { LambdaLayerStack } from '../lib/lambda-layer-stack'
-import { ApiStack } from '../lib/api-stack'
+import { Api } from '../lib/api-stack'
 import * as iam from 'aws-cdk-lib/aws-iam'
-
+import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager'
 interface MainStackProps extends StackProps {
   env: {
     region: string
@@ -43,16 +43,17 @@ export class MainStack extends Stack {
       layers,
     })
 
-    const apiStack = new ApiStack(scope, `${ENV_NAME}-ApiStack`, {
+    const certificate = certificatemanager.Certificate.fromCertificateArn(
+      this,
+      'Certificate',
+      props.certificateArn,
+    )
+
+    const apiStack = new Api(this, `${ENV_NAME}-ApiStack`, {
       ...props,
+      certificate,
       env: props.env,
       lambdas: this.lambdas,
-    })
-
-    this.lambdas.userService.addPermission('ApiInvokePermission', {
-      principal: new iam.ServicePrincipal('apigateway.amazonaws.com'),
-      action: 'lambda:InvokeFunction',
-      sourceArn: `arn:aws:execute-api:${process.env.AWS_REGION}:${process.env.AWS_ACCOUNT_ID}:${apiStack.api.restApiId}/*/*/challenge/*`,
     })
   }
 }

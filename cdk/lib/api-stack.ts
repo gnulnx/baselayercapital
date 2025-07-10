@@ -1,5 +1,4 @@
 import { Construct } from 'constructs'
-import { Stack, StackProps } from 'aws-cdk-lib'
 import * as cdk from 'aws-cdk-lib'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
 import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager'
@@ -31,7 +30,7 @@ const methodResponses = [
   },
 ]
 
-interface ApiStackCustomProps extends StackProps {
+interface ApiProps {
   env: {
     region: string
     account: string
@@ -42,17 +41,17 @@ interface ApiStackCustomProps extends StackProps {
   isProd: boolean
   domainNameStr: string
   lambdas: Lambdas
+  certificate: certificatemanager.ICertificate
+  deployOptions?: apigateway.StageOptions
 }
 
-type ApiStackProps = apigateway.RestApiProps & ApiStackCustomProps
-
-export class ApiStack extends Stack {
+export class Api extends Construct {
   public readonly api: apigateway.RestApi
 
-  constructor(scope: Construct, id: string, props: ApiStackProps) {
-    super(scope, id, props)
+  constructor(scope: Construct, id: string, props: ApiProps) {
+    super(scope, id)
 
-    const { ENV_NAME, certificateArn, isProd, env, domainNameStr, lambdas } = props
+    const { ENV_NAME, isProd, env, domainNameStr, lambdas, certificate } = props
 
     const allowedOrigins = isProd
       ? ['https://baselayercapital.com', 'https://www.baselayercapital.com']
@@ -66,7 +65,6 @@ export class ApiStack extends Stack {
       maxAge: cdk.Duration.days(1),
     }
 
-    // Define defaults for deployOptions
     const defaultDeployOptions: apigateway.StageOptions = {
       dataTraceEnabled: false,
       metricsEnabled: false,
@@ -74,29 +72,25 @@ export class ApiStack extends Stack {
     }
 
     const serviceName = 'api'
-
-    const serviceDomainName = `${ENV_NAME}-${serviceName}-${env.region}.${domainNameStr}`
+    const serviceDomainName = `api-${domainNameStr}`
+    console.log(`Creating API Gateway for  ${serviceDomainName}`)
+    console.log(`domainNameStr: ${domainNameStr}`)
 
     this.api = new apigateway.RestApi(this, `${ENV_NAME}-${serviceName}-Api`, {
       restApiName: `${ENV_NAME}-${serviceName}-Api`,
       deployOptions: {
-        ...defaultDeployOptions, // Spread defaults first
-        ...props.deployOptions, // Override defaults with user-specified options if provided
+        ...defaultDeployOptions,
+        ...props.deployOptions,
       },
       domainName: {
         domainName: serviceDomainName,
-        certificate: certificatemanager.Certificate.fromCertificateArn(
-          this,
-          'Certificate',
-          certificateArn,
-        ),
+        certificate: certificate,
         endpointType: apigateway.EndpointType.REGIONAL,
       },
       defaultCorsPreflightOptions: corsOptions,
       ...props,
     })
 
-    // Add common Gateway Responses
     this.api.addGatewayResponse('DEFAULT_4XX', {
       type: apigateway.ResponseType.DEFAULT_4XX,
       responseHeaders: {
@@ -124,9 +118,9 @@ export class ApiStack extends Stack {
     const userServiceApi = this.api.root.addResource('userservice')
     const proxyResource = userServiceApi.addResource('{proxy+}')
     const integration = new apigateway.LambdaIntegration(lambdas.userService, {
-      proxy: true, // Use Lambda proxy integration for passthrough behavior
+      proxy: true,
     })
-    proxyResource.addMethod('ANY', integration, { methodResponses: methodResponses })
+    proxyResource.addMethod('ANY', integration, { methodResponses })
 
     lambdas.userService.addPermission('ApiInvokePermission', {
       principal: new iam.ServicePrincipal('apigateway.amazonaws.com'),
