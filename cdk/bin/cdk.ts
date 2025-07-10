@@ -70,5 +70,4 @@ const mainStack = new MainStack(app, `${ENV_NAME}-MainStack`, {
 new FrontendStack(app, `${ENV_NAME}-FrontendStack`, {
   ...stackProps,
   env: { account: ACCOUNT, region: REGION },
-  lambdas: mainStack.lambdas,
 })

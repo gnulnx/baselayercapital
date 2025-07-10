@@ -58,7 +58,7 @@ export class Lambdas {
       role: lambdaRole,
       layers: [layers.common],
     })
-    // tables.TxnTable.grantReadWriteData(this.ingestLambda)
+    tables.userService.grantReadWriteData(this.userService)
 
     this.ingestLambda = new PythonFunction(scope, `${ENV_NAME}-IngestLambda`, {
       functionName: `${ENV_NAME}-IngestLambda`,

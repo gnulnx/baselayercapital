@@ -14,6 +14,7 @@ export class TablesStack extends Stack {
   public readonly historicalDataTable: dynamodb.Table
   public readonly mstrKpiTable: dynamodb.Table
   public readonly TxnTable: dynamodb.Table
+  public readonly userService: dynamodb.Table
 
   constructor(scope: Construct, id: string, props: TablesStackProps) {
     super(scope, id, props)
@@ -22,6 +23,17 @@ export class TablesStack extends Stack {
 
     this.TxnTable = new dynamodb.Table(this, `${ENV_NAME}-Transactions`, {
       tableName: `${ENV_NAME}-Transactions`,
+      partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: dynamoRemovalPolicy,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: pointInTimeRecovery,
+      },
+    })
+
+    this.userService = new dynamodb.Table(this, `${ENV_NAME}-UserService`, {
+      tableName: `${ENV_NAME}-UserService`,
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,

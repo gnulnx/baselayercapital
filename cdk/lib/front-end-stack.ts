@@ -9,7 +9,6 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment'
 import { Construct } from 'constructs'
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'
 import * as path from 'path'
-import { Lambdas } from './lambdas'
 
 interface FrontendStackProps extends cdk.StackProps {
   env: {
@@ -20,7 +19,6 @@ interface FrontendStackProps extends cdk.StackProps {
   domainNameStr: string
   isProd: boolean
   certificateArn: string
-  lambdas: Lambdas
 }
 
 export class FrontendStack extends cdk.Stack {

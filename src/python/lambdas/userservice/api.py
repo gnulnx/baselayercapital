@@ -2,6 +2,7 @@ import os
 import json
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.event_handler import APIGatewayRestResolver, CORSConfig
+from handlers.signup import main as signup
 
 ENV_NAME = os.environ.get("ENV_NAME", "dev")
 ENV_TYPE = os.environ.get("ENV_TYPE", "dev")
@@ -45,6 +46,11 @@ app: APIGatewayRestResolver = get_resolver()
 def ping():
     logger.info("Ping request received")
     return {"message": "pong"}
+
+
+@app.post("/userservice/signup")
+def signup_handler():
+    return signup(app.current_event, app.lambda_context)
 
 
 @logger.inject_lambda_context
