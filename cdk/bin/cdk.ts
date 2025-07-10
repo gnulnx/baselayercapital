@@ -30,6 +30,7 @@ let dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
 let deleteProtection = false
 
 const isProd = ENV_NAME === 'prd'
+const baseDomain = 'baselayercapital.com'
 const domainNameStr = isProd ? 'baselayercapital.com' : `${ENV_NAME}.baselayercapital.com`
 
 const certificateArn =
@@ -45,6 +46,7 @@ const stackProps = {
   ENV_NAME,
   ENV_TYPE,
   isProd,
+  baseDomain,
   domainNameStr,
   dynamoRemovalPolicy,
   deleteProtection,
@@ -65,16 +67,8 @@ const mainStack = new MainStack(app, `${ENV_NAME}-MainStack`, {
   layers,
 })
 
-// const apiStack = new ApiStack(app, `${ENV_NAME}-ApiStack`, {
-//   ...stackProps,
-//   env: { account: ACCOUNT, region: REGION },
-//   lambdas: mainStack.lambdas,
-// })
-// apiStack.addDependency(mainStack)
-
 new FrontendStack(app, `${ENV_NAME}-FrontendStack`, {
   ...stackProps,
   env: { account: ACCOUNT, region: REGION },
   lambdas: mainStack.lambdas,
 })
-// frontEndStack.addDependency(apiStack)

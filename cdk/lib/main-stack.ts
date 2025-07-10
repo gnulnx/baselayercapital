@@ -21,7 +21,7 @@ interface MainStackProps extends StackProps {
   tables: TablesStack
   layers: LambdaLayerStack
   isProd: boolean
-  domainNameStr: string
+  baseDomain: string
   certificateArn: string
 }
 
@@ -31,7 +31,7 @@ export class MainStack extends Stack {
   constructor(scope: Construct, id: string, props: MainStackProps) {
     super(scope, id, props)
 
-    const { ENV_NAME, ENV_TYPE, tables, layers, domainNameStr } = props
+    const { ENV_NAME, ENV_TYPE, tables, layers, baseDomain, isProd } = props
 
     const logRetention = logs.RetentionDays.ONE_DAY
 
@@ -50,12 +50,13 @@ export class MainStack extends Stack {
       props.certificateArn,
     )
 
-    const serviceDomainName = `api-${domainNameStr}`
+    const serviceDomainName = isProd ? `api.${baseDomain}` : `${ENV_NAME}-api.${baseDomain}`
 
     const api = new Api(this, `${ENV_NAME}-ApiStack`, {
       ...props,
       certificate,
       env: props.env,
+      serviceDomainName,
       lambdas: this.lambdas,
     })
 

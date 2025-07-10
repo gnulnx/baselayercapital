@@ -11,9 +11,9 @@ interface Route53Props {
   }
   ENV_NAME: string
   isProd: boolean
-  domainNameStr: string
   serviceName: string
   api: Api
+  baseDomain: string
 }
 
 export class Route53 {

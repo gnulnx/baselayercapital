@@ -39,10 +39,11 @@ interface ApiProps {
   ENV_TYPE: string
   certificateArn: string
   isProd: boolean
-  domainNameStr: string
+  baseDomain: string
   lambdas: Lambdas
   certificate: certificatemanager.ICertificate
   deployOptions?: apigateway.StageOptions
+  serviceDomainName: string
 }
 
 export class Api extends Construct {
@@ -51,7 +52,7 @@ export class Api extends Construct {
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id)
 
-    const { ENV_NAME, isProd, env, domainNameStr, lambdas, certificate } = props
+    const { ENV_NAME, isProd, lambdas, certificate, serviceDomainName } = props
 
     const allowedOrigins = isProd
       ? ['https://baselayercapital.com', 'https://www.baselayercapital.com']
@@ -71,13 +72,8 @@ export class Api extends Construct {
       tracingEnabled: false,
     }
 
-    const serviceName = 'api'
-    const serviceDomainName = `api-${domainNameStr}`
-    console.log(`Creating API Gateway for  ${serviceDomainName}`)
-    console.log(`domainNameStr: ${domainNameStr}`)
-
-    this.api = new apigateway.RestApi(this, `${ENV_NAME}-${serviceName}-Api`, {
-      restApiName: `${ENV_NAME}-${serviceName}-Api`,
+    this.api = new apigateway.RestApi(this, `${ENV_NAME}-Api`, {
+      restApiName: `${ENV_NAME}-Api`,
       deployOptions: {
         ...defaultDeployOptions,
         ...props.deployOptions,
