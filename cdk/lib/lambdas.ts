@@ -37,6 +37,15 @@ export class Lambdas {
       ],
     })
 
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [
+          `arn:aws:secretsmanager:${env.region}:${env.account}:secret:baselayercapital/PEPPER-*`,
+        ],
+      }),
+    )
+
     const environment = {
       REGION: env.region,
       ENV_NAME,
