@@ -6,6 +6,7 @@ import { TablesStack } from './tables'
 import { LambdaLayerStack } from '../lib/lambda-layer-stack'
 import { Api } from '../lib/api-stack'
 import * as iam from 'aws-cdk-lib/aws-iam'
+import { Route53 } from './route53'
 import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager'
 interface MainStackProps extends StackProps {
   env: {
@@ -30,7 +31,7 @@ export class MainStack extends Stack {
   constructor(scope: Construct, id: string, props: MainStackProps) {
     super(scope, id, props)
 
-    const { ENV_NAME, ENV_TYPE, tables, layers } = props
+    const { ENV_NAME, ENV_TYPE, tables, layers, domainNameStr } = props
 
     const logRetention = logs.RetentionDays.ONE_DAY
 
@@ -49,11 +50,19 @@ export class MainStack extends Stack {
       props.certificateArn,
     )
 
-    const apiStack = new Api(this, `${ENV_NAME}-ApiStack`, {
+    const serviceDomainName = `api-${domainNameStr}`
+
+    const api = new Api(this, `${ENV_NAME}-ApiStack`, {
       ...props,
       certificate,
       env: props.env,
       lambdas: this.lambdas,
+    })
+
+    new Route53(this, `${ENV_NAME}-userservice-cname`, {
+      ...props,
+      serviceName: serviceDomainName,
+      api: api,
     })
   }
 }
