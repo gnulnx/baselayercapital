@@ -29,7 +29,13 @@ if (!ACCOUNT || !REGION || !PROFILE) {
 let dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
 let deleteProtection = false
 
-if (ENV_TYPE === 'prd') {
+const isProd = ENV_NAME === 'prd'
+const domainNameStr = isProd ? 'baselayercapital.com' : `${ENV_NAME}.baselayercapital.com`
+
+const certificateArn =
+  'arn:aws:acm:us-east-1:740239033577:certificate/6e15ac94-f0b9-42ee-91c5-45d0c95efa81'
+
+if (isProd) {
   dynamoRemovalPolicy = cdk.RemovalPolicy.RETAIN
   deleteProtection = true
 }
@@ -38,8 +44,11 @@ const stackProps = {
   env: { account: ACCOUNT, region: REGION },
   ENV_NAME,
   ENV_TYPE,
+  isProd,
+  domainNameStr,
   dynamoRemovalPolicy,
   deleteProtection,
+  certificateArn,
   pointInTimeRecovery: ENV_TYPE === 'prd',
 }
 
@@ -50,13 +59,22 @@ const layers = new LambdaLayerStack(app, `${ENV_NAME}-BLCLambdaLayerStack`, stac
 
 const tables = new TablesStack(app, `${ENV_NAME}-BtcTablesStack`, stackProps)
 
-new MainStack(app, `${ENV_NAME}-MainStack`, {
+const mainStack = new MainStack(app, `${ENV_NAME}-MainStack`, {
   ...stackProps,
   tables,
   layers,
 })
 
+// const apiStack = new ApiStack(app, `${ENV_NAME}-ApiStack`, {
+//   ...stackProps,
+//   env: { account: ACCOUNT, region: REGION },
+//   lambdas: mainStack.lambdas,
+// })
+// apiStack.addDependency(mainStack)
+
 new FrontendStack(app, `${ENV_NAME}-FrontendStack`, {
   ...stackProps,
   env: { account: ACCOUNT, region: REGION },
+  lambdas: mainStack.lambdas,
 })
+// frontEndStack.addDependency(apiStack)

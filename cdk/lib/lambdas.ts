@@ -25,6 +25,7 @@ export class Lambdas {
   public readonly fetchDataLambda: lambda.Function
   public readonly fetchStrategyKPIs: lambda.Function
   public readonly ingestLambda: lambda.Function
+  public readonly userService: lambda.Function
 
   constructor(scope: Construct, id: string, props: LambdasProps) {
     const { ENV_NAME, ENV_TYPE, tables, logRetention, env, layers } = props
@@ -42,6 +43,22 @@ export class Lambdas {
       ENV_TYPE,
       TABLE_NAME: tables.historicalDataTable.tableName,
     }
+
+    this.userService = new PythonFunction(scope, `${ENV_NAME}-userService`, {
+      functionName: `${ENV_NAME}-userService`,
+      runtime: lambda.Runtime.PYTHON_3_12,
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(30),
+      architecture: lambda.Architecture.ARM_64,
+      entry: '../src/python/lambdas/userservice',
+      index: 'api.py',
+      handler: 'main',
+      logRetention,
+      environment,
+      role: lambdaRole,
+      layers: [layers.common],
+    })
+    // tables.TxnTable.grantReadWriteData(this.ingestLambda)
 
     this.ingestLambda = new PythonFunction(scope, `${ENV_NAME}-IngestLambda`, {
       functionName: `${ENV_NAME}-IngestLambda`,

@@ -4,6 +4,8 @@ import * as logs from 'aws-cdk-lib/aws-logs'
 import { Lambdas } from './lambdas'
 import { TablesStack } from './tables'
 import { LambdaLayerStack } from '../lib/lambda-layer-stack'
+import { ApiStack } from '../lib/api-stack'
+import * as iam from 'aws-cdk-lib/aws-iam'
 
 interface MainStackProps extends StackProps {
   env: {
@@ -17,6 +19,9 @@ interface MainStackProps extends StackProps {
   pointInTimeRecovery: boolean
   tables: TablesStack
   layers: LambdaLayerStack
+  isProd: boolean
+  domainNameStr: string
+  certificateArn: string
 }
 
 export class MainStack extends Stack {
@@ -36,6 +41,18 @@ export class MainStack extends Stack {
       tables,
       logRetention,
       layers,
+    })
+
+    const apiStack = new ApiStack(scope, `${ENV_NAME}-ApiStack`, {
+      ...props,
+      env: props.env,
+      lambdas: this.lambdas,
+    })
+
+    this.lambdas.userService.addPermission('ApiInvokePermission', {
+      principal: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+      action: 'lambda:InvokeFunction',
+      sourceArn: `arn:aws:execute-api:${process.env.AWS_REGION}:${process.env.AWS_ACCOUNT_ID}:${apiStack.api.restApiId}/*/*/challenge/*`,
     })
   }
 }

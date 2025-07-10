@@ -9,6 +9,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment'
 import { Construct } from 'constructs'
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'
 import * as path from 'path'
+import { Lambdas } from './lambdas'
 
 interface FrontendStackProps extends cdk.StackProps {
   env: {
@@ -16,17 +17,21 @@ interface FrontendStackProps extends cdk.StackProps {
     region: string
   }
   ENV_NAME: string
+  domainNameStr: string
+  isProd: boolean
+  certificateArn: string
+  lambdas: Lambdas
 }
 
 export class FrontendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: FrontendStackProps) {
     super(scope, id, props)
 
-    const ENV_NAME = props.ENV_NAME
+    const { ENV_NAME, domainNameStr, isProd, certificateArn } = props
 
-    const isProd = ENV_NAME === 'prd'
-    const domainName = isProd ? 'baselayercapital.com' : `${ENV_NAME}.baselayercapital.com`
-    console.log(`Deploying frontend for domain: ${domainName}`)
+    // const isProd = ENV_NAME === 'prd'
+    // const domainName = isProd ? 'baselayercapital.com' : `${ENV_NAME}.baselayercapital.com`
+    console.log(`Deploying frontend for domain: ${domainNameStr}`)
 
     const oai = new cloudfront.OriginAccessIdentity(this, `${ENV_NAME}-BLC-OAI`)
 
@@ -48,8 +53,8 @@ export class FrontendStack extends cdk.Stack {
     )
 
     // Determine the certificate ARN based on environment
-    const certificateArn =
-      'arn:aws:acm:us-east-1:740239033577:certificate/6e15ac94-f0b9-42ee-91c5-45d0c95efa81'
+    // const certificateArn =
+    //   'arn:aws:acm:us-east-1:740239033577:certificate/6e15ac94-f0b9-42ee-91c5-45d0c95efa81'
 
     const certificate = certificatemanager.Certificate.fromCertificateArn(
       this,
@@ -63,7 +68,7 @@ export class FrontendStack extends cdk.Stack {
         origin: new origins.S3Origin(bucket, { originAccessIdentity: oai }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
-      domainNames: [domainName],
+      domainNames: [domainNameStr],
       certificate,
       errorResponses: [
         {
