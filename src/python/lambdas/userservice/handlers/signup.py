@@ -47,24 +47,39 @@ def main(current_event: APIGatewayProxyEvent, current_context: LambdaContext):
             "error": "password is required",
         }, 400
 
-    response = table.get_item(
-        Key={"PK": email, "SK": "PROFILE"},
-        ConsistentRead=True,
+    response = table.query(
+        IndexName="email-index",
+        KeyConditionExpression=boto3.dynamodb.conditions.Key("email").eq(email),
+        Limit=1,
     )
-    item = response.get("Item")
-    if item:
+    items = response.get("Items", [])
+    if items:
         logger.error("Email already exists", extra={"email": email})
+        return {
+            "error": "Email already exists",
+        }, 400
 
     # Hash the password and retrieve the salt
     password_salt, hashed_password = hash_password(password, pepper)
 
-    return {
-        "status": "success",
-        "password_salt": password_salt,
-        "hashed_password": hashed_password,
-    }, 200
+    user_id = str(uuid4())
+    confirmation_code = "".join([str(random.randint(0, 9)) for _ in range(6)])
+    table.put_item(
+        Item={
+            "PK": user_id,
+            "SK": "USER",
+            "email": email,
+            "password_salt": password_salt,
+            "hashed_password": hashed_password,
+            "confirmed": False,
+            "confirmation_code": confirmation_code,
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+    )
 
-    # return {
-    #     "user_id": user_id,
-    #     "username": username,
-    # }, 200
+    send_email_confirmation_code(email, confirmation_code, email_source)
+
+    return {
+        "message": "Check your email for the confirmation code",
+    }, 200

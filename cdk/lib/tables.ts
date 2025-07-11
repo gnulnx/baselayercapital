@@ -43,6 +43,13 @@ export class TablesStack extends Stack {
       },
     })
 
+    // Add a GSI on email
+    this.userService.addGlobalSecondaryIndex({
+      indexName: 'email-index',
+      partitionKey: { name: 'email', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    })
+
     this.historicalDataTable = new dynamodb.Table(this, `${ENV_NAME}-HistoricalData`, {
       tableName: `${ENV_NAME}-HistoricalData`,
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },

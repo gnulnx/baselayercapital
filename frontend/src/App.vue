@@ -28,7 +28,7 @@ nav {
 }
 
 nav a.router-link-exact-active {
-  color: var(--color-text);
+  color: darkorange;
   font-weight: bold;
 }
 
@@ -37,6 +37,7 @@ nav a {
   padding: 0 1rem;
   border-left: 1px solid var(--color-border);
   text-decoration: none;
+  color: var(--color-text);
 }
 
 nav a:first-of-type {

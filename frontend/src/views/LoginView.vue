@@ -1,47 +1,75 @@
 <template>
   <div class="login">
-    <h1>Login</h1>
+    <h1>{{ isSignup ? 'Sign Up' : 'Login' }}</h1>
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
-        <label for="username">Username</label>
-        <input v-model="username" type="text" id="username" required />
+        <label for="email">Email</label>
+        <input v-model="email" type="email" id="email" required placeholder="...@email.com" />
       </div>
 
       <div class="form-group">
         <label for="password">Password</label>
-        <input v-model="password" type="password" id="password" required />
+        <input v-model="password" type="password" id="password" required placeholder="xxxxxx"/>
       </div>
 
-      <button type="submit">Login</button>
+      <div v-if="isSignup && awaitingConfirmation" class="form-group">
+        <label for="code">Confirmation Code</label>
+        <input v-model="confirmationCode" type="text" id="code" maxlength="6" required />
+      </div>
+
+      <button type="submit">
+        {{ isSignup ? (awaitingConfirmation ? 'Confirm' : 'Sign Up') : 'Login' }}
+      </button>
     </form>
+
+    <div class="toggle">
+      <span>
+        {{ isSignup ? 'Already have an account?' : 'Need an account?' }}
+      </span>
+      <br>
+      <button @click="toggleMode">
+        {{ isSignup ? 'Login' : 'Sign Up' }}
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const username = ref('')
+const isSignup = ref(false)
+const awaitingConfirmation = ref(false)
+const email = ref('')
 const password = ref('')
+const confirmationCode = ref('')
 
 const handleSubmit = () => {
-  console.log('Logging in with:', {
-    username: username.value,
-    password: password.value,
-  })
+  if (isSignup.value) {
+    if (awaitingConfirmation.value) {
+      console.log('Confirming signup with code:', confirmationCode.value)
+      // Call API to verify code
+    } else {
+      console.log('Signing up with:', { email: email.value, password: password.value })
+      // Call API to create account
+      awaitingConfirmation.value = true
+    }
+  } else {
+    console.log('Logging in with:', { email: email.value, password: password.value })
+    // Call API to login
+  }
+}
 
-  // You can use fetch or axios here
-  // Example:
-  /*
-  fetch('/api/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: username.value, password: password.value })
-  }).then(...).catch(...)
-  */
+const toggleMode = () => {
+  isSignup.value = !isSignup.value
+  awaitingConfirmation.value = false
+  email.value = ''
+  password.value = ''
+  confirmationCode.value = ''
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/assets/scss/variables.scss' as *;
 .login {
   max-width: 400px;
   padding: 2rem;
@@ -72,19 +100,33 @@ input {
   border-radius: 4px;
   background-color: #2a2a2a;
   color: white;
+
+  @media (min-width: $breakpoint-md) {
+        padding: 0.25rem;
+    }
 }
 
 button {
-  padding: 0.75rem;
+  padding: 0.5rem;
   background-color: orange;
   border: none;
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s;
+  width: 100%;
 }
 
 button:hover {
   background-color: darkorange;
+}
+
+.toggle {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.toggle span {
+  margin-right: 0.5rem;
 }
 </style>

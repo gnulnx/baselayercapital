@@ -4,3 +4,13 @@ $nav-top-offset: 1rem; // the gap you like at the top
 
 // Composite value used for layout offsets
 $nav-total-offset: calc(#{$nav-top-offset} + #{$nav-height});
+
+$mobile-max-width: 800px;
+$desktop-max-width: 1200px;
+
+// Breakpoints
+$breakpoint-xs: 480px;
+$breakpoint-sm: 600px;
+$breakpoint-md: 900px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1536px;
