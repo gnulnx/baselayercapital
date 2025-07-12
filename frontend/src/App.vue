@@ -12,8 +12,17 @@ import { RouterLink, RouterView } from 'vue-router'
   <RouterView />
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 @use '@/assets/scss/variables.scss' as *;
+
+* {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
 
 nav {
   position: fixed;
@@ -24,6 +33,7 @@ nav {
   right: 0px;
   display: flex;
   justify-content: center;
+  z-index: 1000;
   // border: 1px solid green;
 }
 
