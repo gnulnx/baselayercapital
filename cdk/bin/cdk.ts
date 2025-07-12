@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-import * as dotenv from 'dotenv'
-dotenv.config({ path: '.env.dev', override: true }) // Hard default to .env.dev for local development
-
 import * as cdk from 'aws-cdk-lib'
 import { MainStack } from '../lib/main-stack'
 import { TablesStack } from '../lib/tables'
@@ -20,6 +17,8 @@ const ENV_TYPE = process.env.ENV_TYPE || 'dev'
 const ACCOUNT = process.env.AWS_ACCOUNT_ID!
 const REGION = process.env.AWS_REGION!
 const PROFILE = process.env.AWS_PROFILE!
+
+console.log(`Deploying ${ENV_NAME} environment in account ${ACCOUNT} and region ${REGION}`)
 
 if (!ACCOUNT || !REGION || !PROFILE) {
   throw new Error('Missing one of: AWS_ACCOUNT_ID, AWS_REGION, AWS_PROFILE')
