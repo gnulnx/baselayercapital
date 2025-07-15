@@ -8,6 +8,7 @@ import * as events from 'aws-cdk-lib/aws-events'
 import * as targets from 'aws-cdk-lib/aws-events-targets'
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha'
 import { LambdaLayerStack } from '../lib/lambda-layer-stack'
+import * as sqs from 'aws-cdk-lib/aws-sqs'
 
 interface LambdasProps {
   env: {
@@ -19,6 +20,7 @@ interface LambdasProps {
   tables: TablesStack
   logRetention: logs.RetentionDays
   layers: LambdaLayerStack
+  dataIngestionQueue: sqs.Queue
 }
 
 export class Lambdas {
